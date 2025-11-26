@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
 import { CreditCard, Snowflake, Sun, Settings2, AlertTriangle, TrendingUp, Bot, Copy, RefreshCw } from "lucide-react"
 import type { Card as CardType } from "@/lib/types"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 
 function CreditCardVisual({ card, showDetails = false }: { card: CardType; showDetails?: boolean }) {
   const [flipped, setFlipped] = useState(false)
@@ -326,111 +327,129 @@ export default function CardsPage() {
     console.log("Unfreezing card:", cardId)
   }
 
+  // AI Banker questions relevant to cards page
+  const aiQuestions = [
+    "What are my card benefits?",
+    "How do I increase my credit limit?",
+    "Why was my card declined?",
+    "How do I report a lost card?",
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader title="Cards" description="Manage your debit and credit cards" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card) => (
-          <Sheet key={card.id}>
-            <SheetTrigger asChild>
-              <Card className="cursor-pointer hover:bg-muted/30 transition-colors overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="p-4">
-                    <CreditCardVisual card={card} />
-                  </div>
-
-                  <div className="p-4 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-medium capitalize">{card.type} Card</p>
-                        <p className="text-sm text-muted-foreground">{card.brand}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Cards Grid - takes 2 columns */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {cards.map((card) => (
+              <Sheet key={card.id}>
+                <SheetTrigger asChild>
+                  <Card className="cursor-pointer hover:bg-muted/30 transition-colors overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="p-4">
+                        <CreditCardVisual card={card} />
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          card.status === "frozen"
-                            ? "bg-blue-500/20 text-blue-500"
-                            : "bg-emerald-500/20 text-emerald-500"
-                        }
-                      >
-                        {card.status === "frozen" ? "Frozen" : "Active"}
-                      </Badge>
-                    </div>
 
-                    {card.limit && card.spent !== undefined && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Spent this month</span>
-                          <span>
-                            {formatCurrency(card.spent)} / {formatCurrency(card.limit)}
-                          </span>
+                      <div className="p-4 border-t">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="font-medium capitalize">{card.type} Card</p>
+                            <p className="text-sm text-muted-foreground">{card.brand}</p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className={
+                              card.status === "frozen"
+                                ? "bg-blue-500/20 text-blue-500"
+                                : "bg-emerald-500/20 text-emerald-500"
+                            }
+                          >
+                            {card.status === "frozen" ? "Frozen" : "Active"}
+                          </Badge>
                         </div>
-                        <Progress value={(card.spent / card.limit) * 100} className="h-2" />
+
+                        {card.limit && card.spent !== undefined && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Spent this month</span>
+                              <span>
+                                {formatCurrency(card.spent)} / {formatCurrency(card.limit)}
+                              </span>
+                            </div>
+                            <Progress value={(card.spent / card.limit) * 100} className="h-2" />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </CardContent>
+                  </Card>
+                </SheetTrigger>
+
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="capitalize">{card.type} Card</SheetTitle>
+                    <SheetDescription>Manage your card and view insights</SheetDescription>
+                  </SheetHeader>
+
+                  <div className="mt-6 space-y-6">
+                    <CreditCardVisual card={card} showDetails />
+
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Card Number</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">•••• {card.lastFour}</p>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Expiry</p>
+                          <p className="text-sm font-medium">{card.expiryDate}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <Badge
+                            variant="secondary"
+                            className={
+                              card.status === "frozen"
+                                ? "bg-blue-500/20 text-blue-500"
+                                : "bg-emerald-500/20 text-emerald-500"
+                            }
+                          >
+                            {card.status}
+                          </Badge>
+                        </div>
+                        {card.limit && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Credit Limit</p>
+                            <p className="text-sm font-medium">{formatCurrency(card.limit)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <CardActions
+                      card={card}
+                      onFreeze={() => handleFreeze(card.id)}
+                      onUnfreeze={() => handleUnfreeze(card.id)}
+                    />
+
+                    <CardInsightsPanel card={card} />
                   </div>
-                </CardContent>
-              </Card>
-            </SheetTrigger>
+                </SheetContent>
+              </Sheet>
+            ))}
+          </div>
+        </div>
 
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="capitalize">{card.type} Card</SheetTitle>
-                <SheetDescription>Manage your card and view insights</SheetDescription>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6">
-                <CreditCardVisual card={card} showDetails />
-
-                <div className="p-4 rounded-lg bg-muted/30">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Card Number</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">•••• {card.lastFour}</p>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Expiry</p>
-                      <p className="text-sm font-medium">{card.expiryDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Status</p>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          card.status === "frozen"
-                            ? "bg-blue-500/20 text-blue-500"
-                            : "bg-emerald-500/20 text-emerald-500"
-                        }
-                      >
-                        {card.status}
-                      </Badge>
-                    </div>
-                    {card.limit && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Credit Limit</p>
-                        <p className="text-sm font-medium">{formatCurrency(card.limit)}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <CardActions
-                  card={card}
-                  onFreeze={() => handleFreeze(card.id)}
-                  onUnfreeze={() => handleUnfreeze(card.id)}
-                />
-
-                <CardInsightsPanel card={card} />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ))}
+        {/* AI Banker Widget - takes 1 column on the side */}
+        <div className="lg:col-span-1">
+          <AskAIBankerWidget questions={aiQuestions} description="Get help with your cards" />
+        </div>
       </div>
 
       {cards.length === 0 && (

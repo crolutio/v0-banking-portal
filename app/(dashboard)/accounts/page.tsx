@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ArrowUpRight, ArrowDownRight, Search, TrendingUp, Bot, Copy, Eye, EyeOff, RefreshCw } from "lucide-react"
 import type { Account, Transaction } from "@/lib/types"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 
 function AccountCard({ account, onClick }: { account: Account; onClick: () => void }) {
   const [showBalance, setShowBalance] = useState(true)
@@ -303,6 +304,13 @@ export default function AccountsPage() {
     return sum + acc.balance * rate
   }, 0)
 
+  const aiQuestions = [
+    "What's my current account balance?",
+    "Show my spending breakdown this month",
+    "Which account has the highest interest rate?",
+    "How can I reduce my monthly fees?",
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader title="Accounts" description="Manage your accounts and view transactions" />
@@ -318,56 +326,66 @@ export default function AccountsPage() {
         </CardContent>
       </Card>
 
-      {/* Accounts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {accounts.map((account) => (
-          <Sheet key={account.id}>
-            <SheetTrigger asChild>
-              <div>
-                <AccountCard account={account} onClick={() => setSelectedAccount(account)} />
-              </div>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{account.name}</SheetTitle>
-                <SheetDescription>Account details and insights</SheetDescription>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6">
-                <div className="p-4 rounded-lg bg-muted/30">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Account Number</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{formatAccountNumber(account.accountNumber, false)}</p>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Currency</p>
-                      <p className="text-sm font-medium">{account.currency}</p>
-                    </div>
-                    {account.iban && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground">IBAN</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium font-mono">{account.iban}</p>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Accounts Grid - takes 2 columns */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {accounts.map((account) => (
+              <Sheet key={account.id}>
+                <SheetTrigger asChild>
+                  <div>
+                    <AccountCard account={account} onClick={() => setSelectedAccount(account)} />
                   </div>
-                </div>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>{account.name}</SheetTitle>
+                    <SheetDescription>Account details and insights</SheetDescription>
+                  </SheetHeader>
 
-                <AccountInsightsPanel account={account} />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ))}
+                  <div className="mt-6 space-y-6">
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Account Number</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{formatAccountNumber(account.accountNumber, false)}</p>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Currency</p>
+                          <p className="text-sm font-medium">{account.currency}</p>
+                        </div>
+                        {account.iban && (
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">IBAN</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium font-mono">{account.iban}</p>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <AccountInsightsPanel account={account} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Banker Widget - takes 1 column on the side */}
+        <div className="lg:col-span-1">
+          <AskAIBankerWidget questions={aiQuestions} description="Get insights about your accounts" />
+        </div>
       </div>
 
       {/* Transactions */}

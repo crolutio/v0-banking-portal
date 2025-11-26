@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Image from "next/image"
 import {
@@ -51,6 +50,7 @@ import { savingsGoals, accounts } from "@/lib/mock-data"
 import type { SavingsGoal, SavingsGoalCategory } from "@/lib/types"
 import { formatCurrency } from "@/lib/format"
 import { CitationBadge } from "@/components/ai/citation-badge"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 
 const categoryIcons: Record<SavingsGoalCategory, React.ElementType> = {
   travel: Plane,
@@ -429,7 +429,7 @@ function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Sparkles className="h-4 w-4 text-primary mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">Auto-debit monthly</p>
                   <p className="text-xs text-muted-foreground">Automatically save every month</p>
@@ -618,8 +618,15 @@ export default function SavingsGoalsPage() {
     }
   }
 
+  const aiQuestions = [
+    "How can I reach my goal faster?",
+    "Am I on track with my savings?",
+    "What's the best savings strategy for me?",
+    "How much should I save monthly?",
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Savings Goals</h1>
@@ -631,136 +638,141 @@ export default function SavingsGoalsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-primary/10">
-                <PiggyBank className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Saved</p>
-                <p className="text-xl font-bold">{formatCurrency(totalSaved, "AED")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main content area - 3 columns */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-primary/10">
+                    <PiggyBank className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Saved</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalSaved, "AED")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-amber-500/10">
-                <Target className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Target</p>
-                <p className="text-xl font-bold">{formatCurrency(totalTarget, "AED")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-amber-500/10">
+                    <Target className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Target</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalTarget, "AED")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                <Wallet className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Monthly Savings</p>
-                <p className="text-xl font-bold">{formatCurrency(monthlyTotal, "AED")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Sparkles className="h-5 w-5 text-primary mt-0.5" />
-            <div className="flex-1">
-              <p className="font-medium">AI Savings Insight</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                You're doing great! Based on your current savings rate, you'll reach your Maldives vacation goal by May
-                2025 - one month ahead of schedule. Consider increasing your emergency fund contribution by AED
-                500/month to reach the recommended 6-month expenses buffer.
-                <CitationBadge source="Account Analysis" type="account_ledger" />
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              Adjust Goals
-            </Button>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10">
+                    <Wallet className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Monthly Savings</p>
+                    <p className="text-xl font-bold">{formatCurrency(monthlyTotal, "AED")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
-          <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
-        </TabsList>
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium">AI Savings Insight</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You're doing great! Based on your current savings rate, you'll reach your Maldives vacation goal by
+                    May 2025 - one month ahead of schedule. Consider increasing your emergency fund contribution by AED
+                    500/month to reach the recommended 6-month expenses buffer.
+                    <CitationBadge source="Account Analysis" type="account_ledger" />
+                  </p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Adjust Goals
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        <TabsContent value="active" className="mt-6">
-          {activeGoals.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activeGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Active Goals</h3>
-              <p className="text-sm text-muted-foreground mb-4">Start saving for something special!</p>
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Goal
-              </Button>
-            </Card>
-          )}
-        </TabsContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
+              <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
+              <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="paused" className="mt-6">
-          {pausedGoals.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pausedGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <Pause className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Paused Goals</h3>
-              <p className="text-sm text-muted-foreground">All your goals are actively progressing!</p>
-            </Card>
-          )}
-        </TabsContent>
+            <TabsContent value="active" className="mt-6">
+              {activeGoals.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {activeGoals.map((goal) => (
+                    <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">No Active Goals</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Start saving for something special!</p>
+                  <Button onClick={() => setCreateDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Goal
+                  </Button>
+                </Card>
+              )}
+            </TabsContent>
 
-        <TabsContent value="completed" className="mt-6">
-          {completedGoals.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {completedGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Completed Goals Yet</h3>
-              <p className="text-sm text-muted-foreground">Keep saving - you'll get there!</p>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="paused" className="mt-6">
+              {pausedGoals.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {pausedGoals.map((goal) => (
+                    <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <Pause className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">No Paused Goals</h3>
+                  <p className="text-sm text-muted-foreground">All your goals are actively progressing!</p>
+                </Card>
+              )}
+            </TabsContent>
 
-      <CreateGoalDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
-      <AddFundsDialog
-        goal={addFundsGoal}
-        open={!!addFundsGoal}
-        onOpenChange={(open) => !open && setAddFundsGoal(null)}
-      />
+            <TabsContent value="completed" className="mt-6">
+              {completedGoals.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {completedGoals.map((goal) => (
+                    <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">No Completed Goals Yet</h3>
+                  <p className="text-sm text-muted-foreground">Keep saving - you'll get there!</p>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar with AI widget - 1 column */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <AskAIBankerWidget questions={aiQuestions} description="Get tips to achieve your savings goals" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

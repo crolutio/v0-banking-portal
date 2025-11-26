@@ -421,6 +421,13 @@ function BeneficiariesList() {
 }
 
 export default function PaymentsPage() {
+  const aiQuestions = [
+    "What are the transfer fees?",
+    "How long do international transfers take?",
+    "What's my daily transfer limit?",
+    "How do I add a new beneficiary?",
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader title="Payments & Transfers" description="Send money and manage your beneficiaries" />

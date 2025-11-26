@@ -27,7 +27,7 @@ import {
   Link2,
   BadgePercent,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -44,6 +44,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 
 interface ConnectedApp {
   id: string
@@ -636,6 +637,13 @@ export default function MarketplacePage() {
     return styles[type] || "bg-muted text-muted-foreground"
   }
 
+  const aiQuestions = [
+    "How do connected apps boost my credit?",
+    "Which apps have the best offers?",
+    "Is my data safe when connecting apps?",
+    "How do I disconnect an app?",
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -698,138 +706,109 @@ export default function MarketplacePage() {
         </CardContent>
       </Card>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
-        <Input
-          placeholder="Search apps..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="md:w-80"
-        />
-        <div className="flex-1 overflow-x-auto">
-          <div className="flex gap-2">
-            {appCategories.map((cat) => (
-              <Button
-                key={cat.id}
-                variant={selectedCategory === cat.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat.id)}
-                className="whitespace-nowrap"
-              >
-                <cat.icon className="mr-1 h-4 w-4" />
-                {cat.label}
-              </Button>
-            ))}
+      {/* Main Layout with AI Widget Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main content area - 3 columns */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Search and Filters */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <Input
+              placeholder="Search apps..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="md:w-80"
+            />
+            <div className="flex-1 overflow-x-auto">
+              <div className="flex gap-2">
+                {appCategories.map((cat) => (
+                  <Button
+                    key={cat.id}
+                    variant={selectedCategory === cat.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className="whitespace-nowrap"
+                  >
+                    <cat.icon className="mr-1 h-4 w-4" />
+                    {cat.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs for Connected vs All */}
+          <Tabs defaultValue="all" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="all">All Apps</TabsTrigger>
+              <TabsTrigger value="connected">Connected ({connectedAppsCount})</TabsTrigger>
+              <TabsTrigger value="recommended">Recommended</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredApps.map((app) => (
+                  <AppCard
+                    key={app.id}
+                    app={app}
+                    onConnect={handleConnect}
+                    onViewOffers={handleViewOffers}
+                    onViewDetails={setSelectedApp}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="connected" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredApps
+                  .filter((app) => app.connected)
+                  .map((app) => (
+                    <AppCard
+                      key={app.id}
+                      app={app}
+                      onConnect={handleConnect}
+                      onViewOffers={handleViewOffers}
+                      onViewDetails={setSelectedApp}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recommended" className="space-y-4">
+              <Alert>
+                <Sparkles className="h-4 w-4" />
+                <AlertTitle>Personalized Recommendations</AlertTitle>
+                <AlertDescription>
+                  Based on your spending patterns, connecting these apps could boost your credit score by up to 50
+                  points and unlock better loan rates.
+                </AlertDescription>
+              </Alert>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredApps
+                  .filter((app) => !app.connected && app.creditImpact >= 10)
+                  .sort((a, b) => b.creditImpact - a.creditImpact)
+                  .map((app) => (
+                    <AppCard
+                      key={app.id}
+                      app={app}
+                      onConnect={handleConnect}
+                      onViewOffers={handleViewOffers}
+                      onViewDetails={setSelectedApp}
+                      recommended
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar with AI widget - 1 column */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <AskAIBankerWidget questions={aiQuestions} description="Learn about connected apps and offers" />
           </div>
         </div>
       </div>
-
-      {/* Tabs for Connected vs All */}
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Apps</TabsTrigger>
-          <TabsTrigger value="connected">Connected ({connectedAppsCount})</TabsTrigger>
-          <TabsTrigger value="recommended">Recommended</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredApps.map((app) => (
-              <AppCard
-                key={app.id}
-                app={app}
-                onConnect={handleConnect}
-                onViewOffers={handleViewOffers}
-                onViewDetails={setSelectedApp}
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="connected" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredApps
-              .filter((app) => app.connected)
-              .map((app) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onConnect={handleConnect}
-                  onViewOffers={handleViewOffers}
-                  onViewDetails={setSelectedApp}
-                />
-              ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="recommended" className="space-y-4">
-          <Alert>
-            <Sparkles className="h-4 w-4" />
-            <AlertTitle>Personalized Recommendations</AlertTitle>
-            <AlertDescription>
-              Based on your spending patterns, connecting these apps could boost your credit score by up to 50 points
-              and unlock better loan rates.
-            </AlertDescription>
-          </Alert>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredApps
-              .filter((app) => !app.connected && app.creditImpact >= 10)
-              .sort((a, b) => b.creditImpact - a.creditImpact)
-              .map((app) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onConnect={handleConnect}
-                  onViewOffers={handleViewOffers}
-                  onViewDetails={setSelectedApp}
-                  recommended
-                />
-              ))}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* How It Works Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>How Connected Apps Improve Your Credit</CardTitle>
-          <CardDescription>
-            Your payment history with connected services demonstrates financial responsibility
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-4">
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
-                <Link2 className="h-6 w-6 text-primary" />
-              </div>
-              <h4 className="font-medium mb-1">Connect Apps</h4>
-              <p className="text-sm text-muted-foreground">Link your subscriptions and regular services</p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <h4 className="font-medium mb-1">Secure Data Sharing</h4>
-              <p className="text-sm text-muted-foreground">We only access payment history, never personal content</p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <h4 className="font-medium mb-1">Build Credit Score</h4>
-              <p className="text-sm text-muted-foreground">On-time payments boost your creditworthiness</p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
-                <Gift className="h-6 w-6 text-primary" />
-              </div>
-              <h4 className="font-medium mb-1">Unlock Benefits</h4>
-              <p className="text-sm text-muted-foreground">Better loan rates, higher limits, exclusive offers</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Connect Dialog */}
       <Dialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen}>

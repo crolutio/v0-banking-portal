@@ -22,6 +22,7 @@ import { StatCard } from "@/components/ui/stat-card"
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
 import { formatCurrency } from "@/lib/format"
 import { portfolioHoldings } from "@/lib/mock-data"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import {
   TrendingUp,
   TrendingDown,
@@ -45,7 +46,6 @@ import {
   Search,
   ChevronRight,
   Lock,
-  Globe,
   Home,
 } from "lucide-react"
 
@@ -242,6 +242,14 @@ export default function InvestmentsPage() {
     setInterestDialogOpen(true)
   }
 
+  // AI Banker questions relevant to investments page
+  const aiQuestions = [
+    "How is my portfolio performing?",
+    "What's my risk profile?",
+    "Should I diversify my investments?",
+    "Explain ETFs vs mutual funds",
+  ]
+
   return (
     <div className="space-y-6 p-6">
       {/* Disclaimer Banner */}
@@ -376,431 +384,398 @@ export default function InvestmentsPage() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="portfolio" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-          <TabsTrigger value="explore">Explore Investments</TabsTrigger>
-          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-          <TabsTrigger value="insights">AI Insights</TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main content area - 3 columns */}
+        <div className="lg:col-span-3 space-y-6">
+          <Tabs defaultValue="portfolio" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+              <TabsTrigger value="explore">Explore Investments</TabsTrigger>
+              <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
+              <TabsTrigger value="insights">AI Insights</TabsTrigger>
+            </TabsList>
 
-        {/* Portfolio Tab */}
-        <TabsContent value="portfolio" className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Portfolio Value"
-              value={formatCurrency(totalValue, "USD")}
-              icon={PieChart}
-              description="Across all holdings"
-            />
-            <StatCard
-              title="Total Gain/Loss"
-              value={formatCurrency(totalGain, "USD")}
-              icon={totalGain >= 0 ? TrendingUp : TrendingDown}
-              description={`${totalGainPercent}% overall`}
-              trend={{ value: Number(totalGainPercent), direction: totalGain >= 0 ? "up" : "down" }}
-            />
-            <StatCard title="Risk Profile" value="Moderate" icon={BarChart3} description="Last updated Dec 2024" />
-            <StatCard
-              title="Holdings"
-              value={userHoldings.length.toString()}
-              icon={PieChart}
-              description="Diversified assets"
-            />
-          </div>
-
-          {/* Allocation */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Portfolio Allocation</CardTitle>
-              <CardDescription>Distribution of your investments by asset type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(allocation).map(([type, value]) => {
-                  const percentage = ((value / totalValue) * 100).toFixed(1)
-                  return (
-                    <div key={type} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="capitalize">{type.replace("_", " ")}</span>
-                        <span className="font-medium">
-                          {formatCurrency(value, "USD")} ({percentage}%)
-                        </span>
-                      </div>
-                      <Progress value={Number(percentage)} className="h-2" />
-                    </div>
-                  )
-                })}
+            {/* Portfolio Tab */}
+            <TabsContent value="portfolio" className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Portfolio Value"
+                  value={formatCurrency(totalValue, "USD")}
+                  icon={PieChart}
+                  description="Across all holdings"
+                />
+                <StatCard
+                  title="Total Gain/Loss"
+                  value={formatCurrency(totalGain, "USD")}
+                  icon={totalGain >= 0 ? TrendingUp : TrendingDown}
+                  description={`${totalGainPercent}% overall`}
+                  trend={{ value: Number(totalGainPercent), direction: totalGain >= 0 ? "up" : "down" }}
+                />
+                <StatCard title="Risk Profile" value="Moderate" icon={BarChart3} description="Last updated Dec 2024" />
+                <StatCard
+                  title="Holdings"
+                  value={userHoldings.length.toString()}
+                  icon={PieChart}
+                  description="Diversified assets"
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Holdings Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Holdings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {userHoldings.map((holding) => (
-                  <div
-                    key={holding.id}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
-                        {holding.symbol.slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{holding.symbol}</p>
-                        <p className="text-sm text-muted-foreground">{holding.name}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(holding.value, "USD")}</p>
-                      <p
-                        className={`text-sm flex items-center justify-end gap-1 ${
-                          holding.gain >= 0 ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {holding.gain >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {holding.gain >= 0 ? "+" : ""}
-                        {formatCurrency(holding.gain, "USD")} ({holding.gainPercent.toFixed(2)}%)
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="explore" className="space-y-6">
-          {/* Search Bar */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search investment types..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Badge variant="outline" className="text-muted-foreground">
-              {investmentCategories.reduce((sum, c) => sum + c.investments.length, 0)} investment types available
-            </Badge>
-          </div>
-
-          {/* Accredited Investor Notice */}
-          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Lock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-blue-800 dark:text-blue-200">Accredited Investor Requirements</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Some investments are only available to accredited or qualified investors. Minimum investment amounts
-                    and eligibility requirements vary. Contact your Relationship Manager to discuss your options.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Investment Categories */}
-          <div className="grid gap-6">
-            {(searchQuery ? filteredCategories : investmentCategories).map((category) => (
-              <Card key={category.id} className="overflow-hidden">
-                <CardHeader
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`h-12 w-12 rounded-lg ${category.color} flex items-center justify-center`}>
-                        <category.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{category.name}</CardTitle>
-                        <CardDescription>{category.description}</CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary">{category.investments.length} options</Badge>
-                      <ChevronRight
-                        className={`h-5 w-5 text-muted-foreground transition-transform ${
-                          selectedCategory === category.id ? "rotate-90" : ""
-                        }`}
-                      />
-                    </div>
-                  </div>
+              {/* Allocation */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Portfolio Allocation</CardTitle>
+                  <CardDescription>Distribution of your investments by asset type</CardDescription>
                 </CardHeader>
-
-                {(selectedCategory === category.id || searchQuery) && (
-                  <CardContent className="border-t bg-muted/30">
-                    <div className="grid gap-3 pt-4">
-                      {category.investments.map((investment, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 rounded-lg border bg-background hover:shadow-sm transition-shadow"
-                        >
-                          <div className="flex-1">
-                            <h4 className="font-medium">{investment.name}</h4>
-                            <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-                              <span>Min: {investment.minInvestment}</span>
-                              <span>•</span>
-                              <span>Liquidity: {investment.liquidity}</span>
-                            </div>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Object.entries(allocation).map(([type, value]) => {
+                      const percentage = ((value / totalValue) * 100).toFixed(1)
+                      return (
+                        <div key={type} className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="capitalize">{type.replace("_", " ")}</span>
+                            <span className="font-medium">
+                              {formatCurrency(value, "USD")} ({percentage}%)
+                            </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={getRiskColor(investment.risk)}>{investment.risk} Risk</Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExpressInterest(category.name, investment.name)}
-                            >
-                              Learn More
-                            </Button>
+                          <Progress value={Number(percentage)} className="h-2" />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Holdings Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Holdings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {userHoldings.map((holding) => (
+                      <div
+                        key={holding.id}
+                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
+                            {holding.symbol.slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{holding.symbol}</p>
+                            <p className="text-sm text-muted-foreground">{holding.name}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                )}
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(holding.value, "USD")}</p>
+                          <p
+                            className={`text-sm flex items-center justify-end gap-1 ${
+                              holding.gain >= 0 ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {holding.gain >= 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {holding.gain >= 0 ? "+" : ""}
+                            {formatCurrency(holding.gain, "USD")} ({holding.gainPercent.toFixed(2)}%)
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
               </Card>
-            ))}
-          </div>
+            </TabsContent>
 
-          {searchQuery && filteredCategories.length === 0 && (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">No investment types found matching "{searchQuery}"</p>
-            </Card>
-          )}
-        </TabsContent>
+            <TabsContent value="explore" className="space-y-6">
+              {/* Search Bar */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search investment types..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Badge variant="outline" className="text-muted-foreground">
+                  {investmentCategories.reduce((sum, c) => sum + c.investments.length, 0)} investment types available
+                </Badge>
+              </div>
 
-        {/* Watchlist Tab */}
-        <TabsContent value="watchlist" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-semibold">Your Watchlist</h2>
-              <p className="text-sm text-muted-foreground">Track stocks you're interested in</p>
-            </div>
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Symbol
-            </Button>
-          </div>
-
-          <div className="grid gap-4">
-            {watchlist.map((stock) => (
-              <Card key={stock.symbol}>
+              {/* Accredited Investor Notice */}
+              <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-semibold">
-                        {stock.symbol.slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{stock.symbol}</p>
-                        <p className="text-sm text-muted-foreground">{stock.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <p className="font-medium">${stock.price.toFixed(2)}</p>
-                        <p
-                          className={`text-sm flex items-center justify-end gap-1 ${
-                            stock.change >= 0 ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {stock.change >= 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {stock.change >= 0 ? "+" : ""}
-                          {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="icon">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      </Button>
+                  <div className="flex items-start gap-3">
+                    <Lock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium text-blue-800 dark:text-blue-200">Accredited Investor Requirements</h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                        Some investments are only available to accredited or qualified investors. Minimum investment
+                        amounts and eligibility requirements vary. Contact your Relationship Manager to discuss your
+                        options.
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </TabsContent>
 
-        {/* AI Insights Tab */}
-        <TabsContent value="insights" className="space-y-6">
-          {/* Portfolio Explanation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                Portfolio Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm leading-relaxed">
-                  Your portfolio is well-diversified across <strong>stocks (48%)</strong>, <strong>ETFs (36%)</strong>,
-                  and <strong>bonds (16%)</strong>. This allocation aligns with your <strong>Moderate</strong> risk
-                  profile.
-                </p>
-                <p className="text-sm leading-relaxed mt-2">Key observations:</p>
-                <ul className="text-sm list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-                  <li>Strong performance in tech holdings (AAPL, MSFT) with gains above 17%</li>
-                  <li>Bond allocation provides stability during market volatility</li>
-                  <li>Consider rebalancing if any single holding exceeds 30% of portfolio</li>
-                </ul>
+              {/* Investment Categories */}
+              <div className="grid gap-6">
+                {(searchQuery ? filteredCategories : investmentCategories).map((category) => (
+                  <Card key={category.id} className="overflow-hidden">
+                    <CardHeader
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-12 w-12 rounded-lg ${category.color} flex items-center justify-center`}>
+                            <category.icon className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">{category.name}</CardTitle>
+                            <CardDescription>{category.description}</CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="secondary">{category.investments.length} options</Badge>
+                          <ChevronRight
+                            className={`h-5 w-5 text-muted-foreground transition-transform ${
+                              selectedCategory === category.id ? "rotate-90" : ""
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    {(selectedCategory === category.id || searchQuery) && (
+                      <CardContent className="border-t bg-muted/30">
+                        <div className="grid gap-3 pt-4">
+                          {category.investments.map((investment, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-4 rounded-lg border bg-background hover:shadow-sm transition-shadow"
+                            >
+                              <div className="flex-1">
+                                <h4 className="font-medium">{investment.name}</h4>
+                                <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                                  <span>Min: {investment.minInvestment}</span>
+                                  <span>•</span>
+                                  <span>Liquidity: {investment.liquidity}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Badge className={getRiskColor(investment.risk)}>{investment.risk} Risk</Badge>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleExpressInterest(category.name, investment.name)}
+                                >
+                                  Learn More
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                <CitationBadge
-                  citation={{
-                    id: "1",
-                    source: "Portfolio Holdings",
-                    type: "account_ledger",
-                  }}
-                />
-                <CitationBadge
-                  citation={{
-                    id: "2",
-                    source: "Risk Profile Assessment",
-                    type: "risk_rules",
-                  }}
-                />
-              </div>
-              <ConfidenceIndicator confidence="high" />
+              {searchQuery && filteredCategories.length === 0 && (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No investment types found matching "{searchQuery}"</p>
+                </Card>
+              )}
+            </TabsContent>
 
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-sm">
-                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                <span className="text-orange-700 dark:text-orange-300">
-                  This analysis is for informational purposes only and does not constitute investment advice.
-                </span>
+            {/* Watchlist Tab */}
+            <TabsContent value="watchlist" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-semibold">Your Watchlist</h2>
+                  <p className="text-sm text-muted-foreground">Track stocks you're interested in</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Symbol
+                </Button>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Market News Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Market News Summary
-              </CardTitle>
-              <CardDescription>AI-curated news relevant to your holdings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {marketNews.map((news) => (
-                <div key={news.id} className="p-4 rounded-lg border">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h4 className="font-medium">{news.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">{news.summary}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                        <span>{news.source}</span>
-                        <span>•</span>
-                        <span>{news.time}</span>
+              <div className="grid gap-4">
+                {watchlist.map((stock) => (
+                  <Card key={stock.symbol}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-semibold">
+                            {stock.symbol.slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{stock.symbol}</p>
+                            <p className="text-sm text-muted-foreground">{stock.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="font-medium">${stock.price.toFixed(2)}</p>
+                            <p
+                              className={`text-sm flex items-center justify-end gap-1 ${
+                                stock.change >= 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {stock.change >= 0 ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3" />
+                              )}
+                              {stock.change >= 0 ? "+" : ""}
+                              {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="icon">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* AI Insights Tab */}
+            <TabsContent value="insights" className="space-y-6">
+              {/* Portfolio Explanation */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="h-5 w-5" />
+                    Portfolio Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm leading-relaxed">
+                      Your portfolio is well-diversified across <strong>stocks (48%)</strong>,{" "}
+                      <strong>ETFs (36%)</strong>, and <strong>bonds (16%)</strong>. This allocation aligns with your{" "}
+                      <strong>Moderate</strong> risk profile.
+                    </p>
+                    <p className="text-sm leading-relaxed mt-2">Key observations:</p>
+                    <ul className="text-sm list-disc list-inside mt-2 space-y-1 text-muted-foreground">
+                      <li>Strong performance in tech holdings (AAPL, MSFT) with gains above 17%</li>
+                      <li>Bond allocation provides stability during market volatility</li>
+                      <li>Consider rebalancing if any single holding exceeds 30% of portfolio</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    <CitationBadge
+                      citation={{
+                        id: "1",
+                        source: "Portfolio Holdings",
+                        type: "account_ledger",
+                      }}
+                    />
+                    <CitationBadge
+                      citation={{
+                        id: "2",
+                        source: "Risk Profile Assessment",
+                        type: "risk_rules",
+                      }}
+                    />
+                  </div>
+                  <ConfidenceIndicator confidence="high" />
+
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-orange-700 dark:text-orange-300">
+                      This analysis is for informational purposes only and does not constitute investment advice.
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Market News Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Market News Summary
+                  </CardTitle>
+                  <CardDescription>AI-curated news relevant to your holdings</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {marketNews.map((news) => (
+                    <div key={news.id} className="p-4 rounded-lg border">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className="font-medium">{news.title}</h4>
+                          <p className="text-sm text-muted-foreground mt-1">{news.summary}</p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                            <span>{news.source}</span>
+                            <span>•</span>
+                            <span>{news.time}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="flex-shrink-0">
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
+                  ))}
+
+                  <div className="flex flex-wrap gap-1.5 pt-2">
+                    <CitationBadge
+                      citation={{
+                        id: "1",
+                        source: "Financial Times",
+                        type: "policy",
+                      }}
+                    />
+                    <CitationBadge
+                      citation={{
+                        id: "2",
+                        source: "Bloomberg",
+                        type: "policy",
+                      }}
+                    />
+                    <CitationBadge
+                      citation={{
+                        id: "3",
+                        source: "Gulf News",
+                        type: "policy",
+                      }}
+                    />
                   </div>
-                </div>
-              ))}
 
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                <CitationBadge
-                  citation={{
-                    id: "1",
-                    source: "Financial Times",
-                    type: "policy",
-                  }}
-                />
-                <CitationBadge
-                  citation={{
-                    id: "2",
-                    source: "Bloomberg",
-                    type: "policy",
-                  }}
-                />
-                <CitationBadge
-                  citation={{
-                    id: "3",
-                    source: "Gulf News",
-                    type: "policy",
-                  }}
-                />
-              </div>
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      News summaries are provided for educational purposes. Always verify information from primary
+                      sources before making investment decisions.
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <span className="text-muted-foreground">
-                  News summaries are provided for educational purposes. Always verify information from primary sources
-                  before making investment decisions.
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={interestDialogOpen} onOpenChange={setInterestDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Express Interest</DialogTitle>
-            <DialogDescription>
-              {selectedInvestment && (
-                <>
-                  You're interested in <strong>{selectedInvestment.name}</strong> from {selectedInvestment.category}.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              A Relationship Manager will contact you within 24 hours to discuss this investment opportunity, explain
-              the eligibility requirements, and answer any questions you may have.
-            </p>
-            <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <span>Available in select jurisdictions</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <span>Subject to regulatory approval and KYC verification</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-                <span>Personalized assessment by your dedicated advisor</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-sm">
-              <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-              <span className="text-orange-700 dark:text-orange-300">
-                Past performance is not indicative of future results. All investments carry risk of loss.
-              </span>
-            </div>
+        {/* Sidebar with AI widget - 1 column */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <AskAIBankerWidget questions={aiQuestions} description="Get personalized investment advice and insights" />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setInterestDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setInterestDialogOpen(false)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Request Callback
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </div>
   )
 }

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import {
   MessageSquare,
   Send,
@@ -187,6 +188,14 @@ export default function SupportPage() {
     high: "text-red-600",
   }
 
+  // AI Banker questions relevant to support page
+  const aiQuestions = [
+    "How do I dispute a transaction?",
+    "What's the status of my complaint?",
+    "How do I contact customer service?",
+    "What are your support hours?",
+  ]
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -299,177 +308,190 @@ export default function SupportPage() {
       </div>
 
       {/* Support Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-        {/* Ticket List */}
-        <Card className="lg:col-span-1 flex flex-col">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Your Tickets</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full">
-              <div className="px-4 pb-4 space-y-2">
-                {mockTickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedTicket?.id === ticket.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"
-                    }`}
-                    onClick={() => setSelectedTicket(ticket)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-sm line-clamp-1">{ticket.subject}</p>
-                      <Badge variant="outline" className={statusColors[ticket.status]}>
-                        {ticket.status.replace("_", " ")}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main content area - Support Interface - 3 columns */}
+        <div className="lg:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+            {/* Ticket List */}
+            <Card className="lg:col-span-1 flex flex-col">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Your Tickets</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <ScrollArea className="h-full">
+                  <div className="px-4 pb-4 space-y-2">
+                    {mockTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedTicket?.id === ticket.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"
+                        }`}
+                        onClick={() => setSelectedTicket(ticket)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-sm line-clamp-1">{ticket.subject}</p>
+                          <Badge variant="outline" className={statusColors[ticket.status]}>
+                            {ticket.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                          <span className={priorityColors[ticket.priority]}>• {ticket.priority}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Chat Window */}
+            <Card className="lg:col-span-2 flex flex-col">
+              {selectedTicket ? (
+                <>
+                  <CardHeader className="pb-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{selectedTicket.subject}</CardTitle>
+                        <CardDescription>
+                          Ticket #{selectedTicket.id} • Created{" "}
+                          {new Date(selectedTicket.createdAt).toLocaleDateString()}
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className={statusColors[selectedTicket.status]}>
+                        {selectedTicket.status.replace("_", " ")}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                      <span className={priorityColors[ticket.priority]}>• {ticket.priority}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+                  </CardHeader>
 
-        {/* Chat Window */}
-        <Card className="lg:col-span-2 flex flex-col">
-          {selectedTicket ? (
-            <>
-              <CardHeader className="pb-3 border-b">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{selectedTicket.subject}</CardTitle>
-                    <CardDescription>
-                      Ticket #{selectedTicket.id} • Created {new Date(selectedTicket.createdAt).toLocaleDateString()}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline" className={statusColors[selectedTicket.status]}>
-                    {selectedTicket.status.replace("_", " ")}
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {selectedTicket.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      {message.sender !== "user" && (
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-4">
+                      {selectedTicket.messages.map((message) => (
                         <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            message.sender === "ai" ? "bg-gradient-to-br from-primary to-primary/60" : "bg-muted"
-                          }`}
+                          key={message.id}
+                          className={`flex gap-3 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
                         >
-                          {message.sender === "ai" ? (
-                            <Bot className="h-4 w-4 text-primary-foreground" />
-                          ) : (
-                            <Headphones className="h-4 w-4" />
+                          {message.sender !== "user" && (
+                            <div
+                              className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                message.sender === "ai" ? "bg-gradient-to-br from-primary to-primary/60" : "bg-muted"
+                              }`}
+                            >
+                              {message.sender === "ai" ? (
+                                <Bot className="h-4 w-4 text-primary-foreground" />
+                              ) : (
+                                <Headphones className="h-4 w-4" />
+                              )}
+                            </div>
+                          )}
+
+                          <div
+                            className={`max-w-[80%] space-y-2 ${message.sender === "user" ? "items-end" : "items-start"}`}
+                          >
+                            <div
+                              className={`rounded-2xl px-4 py-3 ${
+                                message.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                              }`}
+                            >
+                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            </div>
+
+                            {message.citations && message.citations.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 px-1">
+                                {message.citations.map((citation) => (
+                                  <CitationBadge key={citation.id} citation={citation} />
+                                ))}
+                              </div>
+                            )}
+
+                            <p className="text-xs text-muted-foreground px-1">
+                              {new Date(message.timestamp).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+
+                          {message.sender === "user" && (
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4" />
+                            </div>
                           )}
                         </div>
-                      )}
+                      ))}
 
-                      <div
-                        className={`max-w-[80%] space-y-2 ${message.sender === "user" ? "items-end" : "items-start"}`}
-                      >
-                        <div
-                          className={`rounded-2xl px-4 py-3 ${
-                            message.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        </div>
-
-                        {message.citations && message.citations.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 px-1">
-                            {message.citations.map((citation) => (
-                              <CitationBadge key={citation.id} citation={citation} />
-                            ))}
+                      {isTyping && (
+                        <div className="flex gap-3">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+                            <Bot className="h-4 w-4 text-primary-foreground" />
                           </div>
-                        )}
-
-                        <p className="text-xs text-muted-foreground px-1">
-                          {new Date(message.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-
-                      {message.sender === "user" && (
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                          <User className="h-4 w-4" />
+                          <div className="bg-muted rounded-2xl px-4 py-3">
+                            <div className="flex gap-1">
+                              <span
+                                className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                style={{ animationDelay: "0ms" }}
+                              />
+                              <span
+                                className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                style={{ animationDelay: "150ms" }}
+                              />
+                              <span
+                                className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                style={{ animationDelay: "300ms" }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
-                  ))}
+                  </ScrollArea>
 
-                  {isTyping && (
+                  <div className="p-4 border-t">
                     <div className="flex gap-3">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-                        <Bot className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                      <div className="bg-muted rounded-2xl px-4 py-3">
-                        <div className="flex gap-1">
-                          <span
-                            className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
-                            style={{ animationDelay: "0ms" }}
-                          />
-                          <span
-                            className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
-                            style={{ animationDelay: "150ms" }}
-                          />
-                          <span
-                            className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
-                            style={{ animationDelay: "300ms" }}
-                          />
-                        </div>
-                      </div>
+                      <Input
+                        placeholder="Type your message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendMessage()
+                          }
+                        }}
+                      />
+                      <Button onClick={handleSendMessage} disabled={!newMessage.trim() || isTyping}>
+                        {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="outline">
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Escalate
+                      </Button>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      AI will try to help first. Click "Escalate" to speak with a human agent.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-semibold mb-2">Select a Ticket</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Choose a ticket from the list to view the conversation, or create a new ticket to get help.
+                  </p>
+                </CardContent>
+              )}
+            </Card>
+          </div>
+        </div>
 
-              <div className="p-4 border-t">
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
-                      }
-                    }}
-                  />
-                  <Button onClick={handleSendMessage} disabled={!newMessage.trim() || isTyping}>
-                    {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="outline">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Escalate
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  AI will try to help first. Click "Escalate" to speak with a human agent.
-                </p>
-              </div>
-            </>
-          ) : (
-            <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="font-semibold mb-2">Select a Ticket</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Choose a ticket from the list to view the conversation, or create a new ticket to get help.
-              </p>
-            </CardContent>
-          )}
-        </Card>
+        {/* Sidebar with AI widget - 1 column */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <AskAIBankerWidget questions={aiQuestions} description="Get quick answers to common support questions" />
+          </div>
+        </div>
       </div>
     </div>
   )
