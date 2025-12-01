@@ -42,12 +42,17 @@ export function CustomerDashboard() {
       const supabase = createClient()
 
       // Fetch Accounts
+      console.log("CustomerDashboard: Fetching data for user:", currentUser?.id)
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
         .eq("user_id", currentUser.id)
 
-      if (accountsError) console.error("Error fetching accounts:", accountsError)
+      if (accountsError) {
+        console.error("Error fetching accounts:", accountsError)
+      } else {
+        console.log("CustomerDashboard: Fetched accounts count:", accountsData?.length)
+      }
       
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
@@ -67,6 +72,7 @@ export function CustomerDashboard() {
       // Fetch Transactions (for all accounts)
       if (mappedAccounts.length > 0) {
         const accountIds = mappedAccounts.map(a => a.id)
+        console.log("CustomerDashboard: Fetching transactions for account IDs:", accountIds)
         const { data: txData, error: txError } = await supabase
           .from("transactions")
           .select("*")
@@ -74,6 +80,7 @@ export function CustomerDashboard() {
           .order("date", { ascending: false })
 
         if (txError) console.error("Error fetching transactions:", txError)
+        else console.log("CustomerDashboard: Fetched transactions count:", txData?.length)
 
         const mappedTransactions: Transaction[] = (txData || []).map((t: any) => ({
           id: t.id,

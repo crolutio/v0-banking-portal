@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -173,6 +173,27 @@ function Sidebar({ className }: { className?: string }) {
 
 function Topbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Avoid hydration mismatch by rendering interactive elements only on client
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+
+  if (!mounted) {
+    return (
+      <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-4">
+          <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
+          <div className="hidden lg:flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-primary" />
+            <span className="font-semibold">Bank of the Future</span>
+          </div>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

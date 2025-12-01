@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import {
   Send,
   Bot,
@@ -73,6 +74,99 @@ const suggestedPrompts = [
   "What's my current account balance?",
   "Show me my recurring payments",
 ]
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+const ChartRenderer = ({ data }: { data: any }) => {
+  if (!data || !data.data || data.data.length === 0) return null;
+
+  if (data.type === 'bar') {
+    return (
+      <div className="w-full h-[200px] mt-2 mb-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data.data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+            <RechartsTooltip 
+              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            />
+            <Bar dataKey="value" fill="#000000" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (data.type === 'pie') {
+    return (
+      <div className="w-full h-[200px] mt-2 mb-4 flex items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data.data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {data.data.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <RechartsTooltip />
+            <Legend verticalAlign="bottom" height={36}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const FormattedText = ({ text }: { text: string }) => {
+  // Simple markdown parser
+  const parts = text.split(/(\*\*.*?\*\*|\n)/g);
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i} className="font-bold text-foreground">{part.slice(2, -2)}</strong>;
+        }
+        if (part === "\n") {
+           return <br key={i} />;
+        }
+        return part;
+      })}
+    </span>
+  );
+};
+
+const MessageContent = ({ content }: { content: string }) => {
+  const parts = content.split(/(```chart[\s\S]*?```)/g);
+
+  return (
+    <div className="text-sm space-y-2">
+      {parts.map((part, i) => {
+        if (part.startsWith("```chart")) {
+          try {
+            const jsonStr = part.replace(/^```chart\s*/, "").replace(/```$/, "");
+            const chartData = JSON.parse(jsonStr);
+            return <ChartRenderer key={i} data={chartData} />;
+          } catch (e) {
+             // If parsing fails (e.g. streaming incomplete), show nothing or raw text
+             return null;
+          }
+        }
+        return <FormattedText key={i} text={part} />;
+      })}
+    </div>
+  );
+};
 
 interface AIBankerChatInterfaceProps {
   embedded?: boolean
@@ -239,7 +333,7 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
                       message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted",
                     )}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <MessageContent content={message.content} />
                   </div>
                 </div>
 

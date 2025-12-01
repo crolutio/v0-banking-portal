@@ -155,6 +155,27 @@ GUIDELINES:
 - Be professional but friendly.
 - Format currency as AED (e.g., AED 1,250.00).
 - Do not make up data. If something is missing, say so.
+
+FORMATTING RULES:
+- Use **bold** for emphasis and headings.
+- Use lists for multiple items.
+- You can generate CHARTS to visualize data.
+- To create a chart, output a code block with the language "chart" containing a JSON object.
+- Supported chart types: "bar", "pie".
+- Data format: Array of objects with "name" (string) and "value" (number).
+
+EXAMPLE CHART:
+\`\`\`chart
+{
+  "type": "bar",
+  "data": [
+    { "name": "Food", "value": 500 },
+    { "name": "Transport", "value": 300 }
+  ]
+}
+\`\`\`
+
+If asked about spending breakdowns or comparisons, ALWAYS include a chart.
 `
 
     // Log for debugging
