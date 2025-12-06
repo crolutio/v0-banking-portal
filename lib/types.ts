@@ -43,6 +43,7 @@ export type TransactionCategory =
   | "salary"
   | "investment"
   | "fees"
+  | "subscriptions"
   | "other"
 
 export type TransactionCategorySource = "seed" | "auto_rule" | "manual" | "ai"
