@@ -11,9 +11,10 @@ import { formatCurrency } from "@/lib/format"
 import { useRole } from "@/lib/role-context"
 import { createClient } from "@/lib/supabase/client"
 import type { PortfolioHolding } from "@/lib/types"
-import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { AskAIBankerWidget, AskAIButton } from "@/components/ai/ask-ai-banker-widget"
 import {
   ArrowLeft,
+  ArrowRight,
   TrendingUp,
   TrendingDown,
   Landmark,
@@ -25,8 +26,17 @@ import {
   Palmtree,
   Plus,
   Info,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react"
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts"
 
 // Static Data for Categories
 const categoryConfig: Record<string, any> = {
@@ -123,6 +133,7 @@ export default function InvestmentCategoryPage() {
 
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedHolding, setSelectedHolding] = useState<PortfolioHolding | null>(null)
 
   useEffect(() => {
     if (!config) {
@@ -223,7 +234,11 @@ export default function InvestmentCategoryPage() {
                     ) : holdings.length > 0 ? (
                         <div className="space-y-4">
                             {holdings.map((h) => (
-                                <div key={h.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
+                                <button
+                                  key={h.id}
+                                  onClick={() => setSelectedHolding(h)}
+                                  className="flex items-center justify-between w-full text-left p-4 border rounded-lg hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                                >
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-sm">
                                             {h.symbol.substring(0, 2)}
@@ -239,7 +254,7 @@ export default function InvestmentCategoryPage() {
                                             {h.gain >= 0 ? '+' : ''}{h.gainPercent.toFixed(2)}%
                                         </p>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     ) : (
@@ -303,7 +318,167 @@ export default function InvestmentCategoryPage() {
             />
         </div>
       </div>
+
+      {selectedHolding && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => setSelectedHolding(null)}
+          />
+          <div className="fixed top-16 bottom-6 right-0 w-full lg:w-[40vw] bg-background border-l shadow-2xl z-50 flex flex-col">
+            <div className="flex items-start justify-between border-b p-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Holding Details</p>
+                <h2 className="text-2xl font-semibold flex items-center gap-2">
+                  {selectedHolding.name}
+                  <Badge variant="secondary">{selectedHolding.symbol}</Badge>
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Last price: {formatCurrency(selectedHolding.currentPrice, "USD")} · Position value{" "}
+                  <span className="font-medium">{formatCurrency(selectedHolding.value, "USD")}</span>
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedHolding(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <section>
+                <h3 className="text-sm font-medium mb-3">Performance Snapshot</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-lg bg-muted/40">
+                    <p className="text-muted-foreground text-xs">Market Value</p>
+                    <p className="text-base font-semibold">{formatCurrency(selectedHolding.value, "USD")}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/40">
+                    <p className="text-muted-foreground text-xs">Unrealized P/L</p>
+                    <p className={`text-base font-semibold ${selectedHolding.gain >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {selectedHolding.gain >= 0 ? "+" : ""}
+                      {formatCurrency(selectedHolding.gain, "USD")} ({selectedHolding.gainPercent.toFixed(2)}%)
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/40">
+                    <p className="text-muted-foreground text-xs">Quantity</p>
+                    <p className="text-base font-semibold">{selectedHolding.quantity.toLocaleString()}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/40">
+                    <p className="text-muted-foreground text-xs">Average Cost</p>
+                    <p className="text-base font-semibold">
+                      {formatCurrency(selectedHolding.avgCost, "USD")}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Market Value History</h3>
+                  <span className="text-xs text-muted-foreground">5-year trend</span>
+                </div>
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={generateMockPriceHistory(selectedHolding.symbol)}>
+                      <defs>
+                        <linearGradient id="holdingArea" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#16a34a"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#holdingArea)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Latest News & Signals</h3>
+                  <Badge variant="outline" className="text-xs">Curated</Badge>
+                </div>
+                <div className="space-y-3">
+                  {generateMockNews(selectedHolding.symbol).map((news, idx) => (
+                    <div key={idx} className="rounded-xl border p-3">
+                      <p className="text-sm font-medium">{news.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{news.source} · {news.time}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{news.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-medium mb-3">AI Agent Actions</h3>
+                <div className="grid gap-2">
+                  <AskAIButton
+                    agentId="investmentor"
+                    initialQuestion={`Summarize ${selectedHolding.name} (${selectedHolding.symbol}) performance and suggest if I should add to my position.`}
+                  >
+                    <Button variant="outline" className="w-full justify-between">
+                      Ask Investmentor for advice
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
+                  <AskAIButton
+                    agentId="investmentor"
+                    initialQuestion={`What are the key risks for ${selectedHolding.name} (${selectedHolding.symbol}) right now?`}
+                  >
+                    <Button variant="ghost" className="w-full justify-between">
+                      Request risk outlook
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
+                </div>
+              </section>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
+}
+
+function generateMockPriceHistory(symbol: string) {
+  const now = new Date()
+  return Array.from({ length: 10 }).map((_, idx) => {
+    const year = now.getFullYear() - (9 - idx)
+    return {
+      label: year.toString(),
+      value: Math.round(5000 + Math.sin(idx / 2) * 2000 + idx * 500),
+    }
+  })
+}
+
+function generateMockNews(symbol: string) {
+  return [
+    {
+      title: `${symbol} beats earnings expectations`,
+      source: "Bloomberg",
+      time: "2h ago",
+      summary: `${symbol} posted stronger-than-expected quarterly revenue on resilient enterprise demand.`,
+    },
+    {
+      title: `${symbol} expands AI partnership`,
+      source: "Reuters",
+      time: "6h ago",
+      summary: `Management announced a multi-year collaboration to accelerate AI workloads using ${symbol}'s hardware.`,
+    },
+    {
+      title: `${symbol} technical indicators flashing overbought`,
+      source: "CNBC",
+      time: "12h ago",
+      summary: `Relative strength index approaches 75; traders watching for consolidation before next leg higher.`,
+    },
+  ]
 }
 
