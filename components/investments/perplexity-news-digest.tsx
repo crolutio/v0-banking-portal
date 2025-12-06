@@ -32,57 +32,69 @@ export function PerplexityNewsDigest({ holdings }: PerplexityNewsDigestProps) {
     try {
       // Pick up to 3 random holdings to keep the query focused
       const focusHoldings = [...holdings].sort(() => 0.5 - Math.random()).slice(0, 3)
-      const symbols = focusHoldings.map(h => h.symbol).join(", ")
-
-      const response = await fetch("/api/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId: "researcher",
-          messages: [
-            {
-              role: "user",
-              content: `Generate a brief news digest for these stocks: ${symbols}. 
-              For each stock, provide 1 most critical recent headline with a 1-sentence summary, source, and relative time (e.g. "2h ago").
-              Format strictly as JSON array: [{ "symbol": "AAPL", "title": "...", "summary": "...", "source": "...", "publishedAt": "..." }]`
-            }
-          ]
+      
+      // Try fetching from Perplexity first (experimental/chat-based)
+      // If this fails, we catch it and proceed to standard market data fallback
+      try {
+        const symbols = focusHoldings.map(h => h.symbol).join(", ")
+        const response = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentId: "researcher",
+            messages: [
+              {
+                role: "user",
+                content: `Generate a brief news digest for these stocks: ${symbols}. 
+                For each stock, provide 1 most critical recent headline with a 1-sentence summary, source, and relative time (e.g. "2h ago").
+                Format strictly as JSON array: [{ "symbol": "AAPL", "title": "...", "summary": "...", "source": "...", "publishedAt": "..." }]`
+              }
+            ]
+          })
         })
-      })
+        
+        // If Perplexity fails (e.g. 500 error due to missing key or invalid model), 
+        // we just log it and don't throw, allowing fallback to run.
+        if (!response.ok) {
+           console.warn("Perplexity digest fetch skipped (API error or missing key), using fallback.")
+        } else {
+           // TODO: Implement stream parsing if we want to use the chat response directly.
+           // Currently we just consume the response to not block, but use fallback data for reliability.
+           // In a real implementation, we'd parse the JSON from the chat stream here.
+        }
+      } catch (e) {
+        console.warn("Perplexity digest fetch failed", e)
+      }
 
-      if (!response.ok) throw new Error("Failed to fetch news")
-
-      // The researcher API returns a stream. For this component, we'll accumulate the full text then try to parse JSON.
-      // Note: In a production app, we might want a dedicated endpoint that returns structured JSON directly without streaming.
-      // For now, we'll use a simplified approach or mock if parsing fails, as the stream format is for chat.
-      
-      // FALLBACK: Since the streaming API is chat-optimized, we'll simulate the "digest" here 
-      // by using the /api/market-data endpoint for real data instead of trying to parse chat stream.
-      
+      // FALLBACK: Use /api/market-data endpoint for real data
       const realNewsItems: NewsItem[] = []
       
       for (const holding of focusHoldings) {
-        const marketRes = await fetch(`/api/market-data?symbol=${holding.symbol}`)
-        if (marketRes.ok) {
-            const data = await marketRes.json()
-            if (data.news && data.news.length > 0) {
-                const item = data.news[0]
-                realNewsItems.push({
-                    symbol: holding.symbol,
-                    title: item.title,
-                    summary: item.summary || `Latest news for ${holding.name}`,
-                    source: item.source,
-                    publishedAt: "Recent", // API returns timestamp, simplified here
-                    url: item.link
-                })
-            }
+        try {
+          const marketRes = await fetch(`/api/market-data?symbol=${holding.symbol}`)
+          if (marketRes.ok) {
+              const data = await marketRes.json()
+              if (data.news && data.news.length > 0) {
+                  const item = data.news[0]
+                  realNewsItems.push({
+                      symbol: holding.symbol,
+                      title: item.title,
+                      summary: item.summary || `Latest news for ${holding.name}`,
+                      source: item.source,
+                      publishedAt: "Recent", // API returns timestamp, simplified here
+                      url: item.link
+                  })
+              }
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch market data for ${holding.symbol}`, err)
         }
       }
       
       setNews(realNewsItems)
       setLastUpdated(new Date())
     } catch (error) {
-      console.error("News fetch failed", error)
+      console.error("News digest update failed", error)
     } finally {
       setIsLoading(false)
     }
@@ -168,4 +180,3 @@ export function PerplexityNewsDigest({ holdings }: PerplexityNewsDigestProps) {
     </Card>
   )
 }
-

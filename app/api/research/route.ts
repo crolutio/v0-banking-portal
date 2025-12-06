@@ -3,13 +3,20 @@ import { getAgentPersona } from "@/lib/ai/agents"
 
 const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions"
 
+// Using the latest supported online model
+const MODEL_NAME = "llama-3.1-sonar-large-128k-online"
+
 export async function POST(req: Request) {
   try {
     const { messages = [], agentId = "researcher" } = await req.json()
     const apiKey = process.env.PERPLEXITY_API_KEY
 
     if (!apiKey) {
-      return new NextResponse("Missing Perplexity API key", { status: 500 })
+      console.error("Missing Perplexity API key in environment variables")
+      return new NextResponse(
+        JSON.stringify({ error: "Missing Perplexity API key" }), 
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      )
     }
 
     const persona = getAgentPersona(agentId)
@@ -21,7 +28,7 @@ Guidelines:
 - Keep responses concise (<= 250 words) unless the user requests more detail.`
 
     const payload = {
-      model: "pplx-70b-online",
+      model: MODEL_NAME,
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
@@ -32,6 +39,8 @@ Guidelines:
       ],
     }
 
+    // console.log("Calling Perplexity API with model:", MODEL_NAME)
+
     const pplxResponse = await fetch(PERPLEXITY_ENDPOINT, {
       method: "POST",
       headers: {
@@ -41,9 +50,20 @@ Guidelines:
       body: JSON.stringify(payload),
     })
 
-    if (!pplxResponse.ok || !pplxResponse.body) {
+    if (!pplxResponse.ok) {
       const errorText = await pplxResponse.text()
-      return new NextResponse(errorText || "Perplexity request failed", { status: 500 })
+      console.error(`Perplexity API Error (${pplxResponse.status}):`, errorText)
+      return new NextResponse(
+        JSON.stringify({ error: `Perplexity API Error: ${errorText}` }), 
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (!pplxResponse.body) {
+      return new NextResponse(
+        JSON.stringify({ error: "No response body from Perplexity" }), 
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      )
     }
 
     return new NextResponse(pplxResponse.body, {
@@ -52,8 +72,10 @@ Guidelines:
       },
     })
   } catch (error: any) {
-    console.error("Perplexity error:", error)
-    return new NextResponse(error?.message || "Internal Server Error", { status: 500 })
+    console.error("Perplexity route error:", error)
+    return new NextResponse(
+      JSON.stringify({ error: error?.message || "Internal Server Error" }), 
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
   }
 }
-
