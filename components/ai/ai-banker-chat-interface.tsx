@@ -142,6 +142,18 @@ export const AI_AGENT_THEMES: Record<AIAgentId, AgentTheme> = {
     placeholder: "Ask about savings habits or goal progress...",
     pulseColor: "#fbbf24",
     iconGradient: "linear-gradient(135deg, #fef9c3, #fef3c7)"
+  },
+  researcher: {
+    icon: LineChart,
+    accent: "#0f172a",
+    accentMuted: "rgba(15,23,42,0.12)",
+    gradientFrom: "rgba(148,163,184,0.12)",
+    gradientTo: "rgba(148,163,184,0)",
+    badgeBg: "rgba(148,163,184,0.16)",
+    badgeText: "#0f172a",
+    placeholder: "Ask for live research or news...",
+    pulseColor: "#0f172a",
+    iconGradient: "linear-gradient(135deg, #0f172a, #1e293b)"
   }
 }
 
@@ -256,8 +268,10 @@ export function AIBankerChatInterface({
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const apiPath = agentId === "researcher" ? "/api/research" : "/api/chat"
+
   const { messages, input, handleInputChange, handleSubmit, setMessages, isLoading, setInput, append, error } = useChat({
-    api: "/api/chat",
+    api: apiPath,
     body: {
       userId: currentUser?.id,
       agentId

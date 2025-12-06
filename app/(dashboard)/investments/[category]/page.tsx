@@ -438,6 +438,15 @@ export default function InvestmentCategoryPage() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </AskAIButton>
+                  <AskAIButton
+                    agentId="researcher"
+                    initialQuestion={`Provide the latest news and market commentary on ${selectedHolding.name} (${selectedHolding.symbol}).`}
+                  >
+                    <Button variant="ghost" className="w-full justify-between">
+                      Ask Research Analyst
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
                 </div>
               </section>
             </div>

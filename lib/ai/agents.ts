@@ -1,4 +1,4 @@
-export type AIAgentId = "banker" | "investmentor" | "risk_guardian" | "savings_coach"
+export type AIAgentId = "banker" | "investmentor" | "risk_guardian" | "savings_coach" | "researcher"
 
 type AgentPersona = {
   title: string
@@ -30,6 +30,12 @@ export const AI_AGENT_PERSONAS: Record<AIAgentId, AgentPersona> = {
     shortDescription: "Goal-based mentor focused on savings habits and automation.",
     personaPrompt:
       "You are AI Savings Coach, a motivational mentor for savings goals. Encourage healthy habits, smart automation, and achievable milestones. Celebrate progress, surface contribution insights, and suggest adjustments that keep goals on track."
+  },
+  researcher: {
+    title: "AI Research Analyst",
+    shortDescription: "Live market intelligence powered by Perplexity.",
+    personaPrompt:
+      "You are AI Research Analyst, a meticulous market researcher with access to Perplexity's live knowledge. Deliver concise, up-to-the-minute insights on public companies, macro trends, competitive positioning and risks. Cite credible sources, include dates, and highlight actionable takeaways for an investment committee."
   }
 }
 

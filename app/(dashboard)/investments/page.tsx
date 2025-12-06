@@ -495,6 +495,17 @@ export default function InvestmentsPage() {
               title="Ask AI Investmentor"
               agentId="investmentor"
             />
+
+            <AskAIBankerWidget
+              questions={[
+                "What are analysts saying about NVIDIA this week?",
+                "Summarize the latest macro headwinds for tech stocks",
+                "Compare Apple and Microsoft valuation multiples",
+              ]}
+              description="Live market intel powered by Perplexity"
+              title="Ask AI Research Analyst"
+              agentId="researcher"
+            />
         </div>
       </div>
     </div>
