@@ -59,7 +59,7 @@ function AIBankerPageContent() {
             </CardContent>
           </Card>
         </div>
-        <div className="h-full bg-background rounded-xl border shadow-sm overflow-hidden">
+        <div className="h-full bg-background rounded-xl border shadow-sm overflow-hidden lg:w-[min(520px,45vw)] w-full">
           <AIBankerChatInterface initialMessage={prompt} />
         </div>
       </div>
