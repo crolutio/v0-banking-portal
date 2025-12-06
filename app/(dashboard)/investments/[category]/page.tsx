@@ -12,6 +12,7 @@ import { useRole } from "@/lib/role-context"
 import { createClient } from "@/lib/supabase/client"
 import type { PortfolioHolding } from "@/lib/types"
 import { AskAIBankerWidget, AskAIButton } from "@/components/ai/ask-ai-banker-widget"
+import { PerplexityNewsDigest } from "@/components/investments/perplexity-news-digest"
 import {
   ArrowLeft,
   ArrowRight,
@@ -356,6 +357,10 @@ export default function InvestmentCategoryPage() {
               description={`Ask about ${config.name}`}
               title="Ask AI Investmentor"
               agentId="investmentor"
+            />
+
+            <PerplexityNewsDigest 
+              holdings={holdings.map(h => ({ symbol: h.symbol, name: h.name }))}
             />
         </div>
       </div>

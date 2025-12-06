@@ -34,7 +34,6 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from "recharts"
-import { PerplexityNewsDigest } from "@/components/investments/perplexity-news-digest"
 import { useRole } from "@/lib/role-context"
 import { createClient } from "@/lib/supabase/client"
 import type { PortfolioHolding } from "@/lib/types"
@@ -506,10 +505,6 @@ export default function InvestmentsPage() {
               description="Live market intel powered by Perplexity"
               title="Ask AI Research Analyst"
               agentId="researcher"
-            />
-            
-            <PerplexityNewsDigest 
-                holdings={userHoldings.filter(h => h.type === 'stock').map(h => ({ symbol: h.symbol, name: h.name }))} 
             />
         </div>
       </div>
