@@ -447,6 +447,33 @@ export default function InvestmentCategoryPage() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </AskAIButton>
+                  <AskAIButton
+                    agentId="investmentor"
+                    initialQuestion={`Conduct a comprehensive analysis of ${selectedHolding.name} focusing on the key drivers of stock price movements over the past 12 months. Break down the analysis into: 1) Fundamental drivers (earnings, revenue growth, margins, cash flow, competitive position), 2) Technical factors (market sentiment, institutional flows, macroeconomic conditions, sector trends), and 3) Catalyst events (earnings announcements, product launches, regulatory changes, management changes, market events). For each category, identify which factors had the strongest correlation with price movements and explain the underlying mechanisms.`}
+                  >
+                    <Button variant="outline" className="w-full justify-between">
+                      Multi-factor driver analysis
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
+                  <AskAIButton
+                    agentId="investmentor"
+                    initialQuestion={`Analyze the key catalysts and market events that drove significant stock price movements for ${selectedHolding.name} over the past 6-12 months. Identify both hard catalysts (earnings reports, product launches, approvals, acquisitions) and soft catalysts (market share changes, regulatory developments, competitive threats). For each catalyst, quantify the stock price impact, explain the timeline from announcement to market reaction, and assess whether the reaction was justified based on fundamentals. Also highlight upcoming catalysts that could move ${selectedHolding.symbol}.`}
+                  >
+                    <Button variant="outline" className="w-full justify-between">
+                      Catalyst & event analysis
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
+                  <AskAIButton
+                    agentId="investmentor"
+                    initialQuestion={`Perform a sentiment and market psychology analysis for ${selectedHolding.name} (${selectedHolding.symbol}) covering: 1) News sentiment from financial media, analyst reports, and social media over the past 6 months, 2) Institutional investor behavior (insider trading, ownership changes, options activity), 3) Market positioning data such as short interest, put/call ratios, and volatility measures, and 4) Behavioral factors like fear/greed cycles, momentum patterns, and contrarian indicators. Correlate these sentiment metrics with actual price movements to identify which psychological factors best predicted its performance.`}
+                  >
+                    <Button variant="outline" className="w-full justify-between">
+                      Sentiment psychology review
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </AskAIButton>
                 </div>
               </section>
             </div>
