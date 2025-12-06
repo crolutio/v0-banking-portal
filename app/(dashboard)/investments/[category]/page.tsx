@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -134,6 +134,11 @@ export default function InvestmentCategoryPage() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedHolding, setSelectedHolding] = useState<PortfolioHolding | null>(null)
+  const [historyData, setHistoryData] = useState<Array<{ label: string; price: number }>>([])
+  const [newsItems, setNewsItems] = useState<
+    Array<{ title: string; source: string; link: string; published: number | null; summary?: string }>
+  >([])
+  const [isMarketDataLoading, setIsMarketDataLoading] = useState(false)
 
   useEffect(() => {
     if (!config) {
@@ -182,6 +187,42 @@ export default function InvestmentCategoryPage() {
 
     fetchHoldings()
   }, [currentUser, config])
+
+  useEffect(() => {
+    if (!selectedHolding) {
+      setHistoryData([])
+      setNewsItems([])
+      return
+    }
+
+    let cancelled = false
+    const symbol = selectedHolding.symbol
+    async function fetchMarketData() {
+      try {
+        setIsMarketDataLoading(true)
+        const response = await fetch(`/api/market-data?symbol=${encodeURIComponent(symbol)}`)
+        if (!response.ok) throw new Error("Request failed")
+        const data = await response.json()
+        if (!cancelled) {
+          setHistoryData(data.history || [])
+          setNewsItems(data.news || [])
+        }
+      } catch (error) {
+        console.error("Failed to load market data", error)
+        if (!cancelled) {
+          setHistoryData([])
+          setNewsItems([])
+        }
+      } finally {
+        if (!cancelled) setIsMarketDataLoading(false)
+      }
+    }
+
+    fetchMarketData()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedHolding])
 
   if (!config) {
     return (
@@ -371,51 +412,14 @@ export default function InvestmentCategoryPage() {
                 </div>
               </section>
 
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">Market Value History</h3>
-                  <span className="text-xs text-muted-foreground">5-year trend</span>
-                </div>
-                <div className="h-44">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={generateMockPriceHistory(selectedHolding.symbol)}>
-                      <defs>
-                        <linearGradient id="holdingArea" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#16a34a"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#holdingArea)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </section>
+              <MarketHistoryChart
+                history={historyData}
+                quantity={selectedHolding.quantity}
+                isLoading={isMarketDataLoading}
+                symbol={selectedHolding.symbol}
+              />
 
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">Latest News & Signals</h3>
-                  <Badge variant="outline" className="text-xs">Curated</Badge>
-                </div>
-                <div className="space-y-3">
-                  {generateMockNews(selectedHolding.symbol).map((news, idx) => (
-                    <div key={idx} className="rounded-xl border p-3">
-                      <p className="text-sm font-medium">{news.title}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{news.source} · {news.time}</p>
-                      <p className="text-xs text-muted-foreground mt-2">{news.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <LatestNewsSection newsItems={newsItems} isLoading={isMarketDataLoading} symbol={selectedHolding.symbol} />
 
               <section>
                 <h3 className="text-sm font-medium mb-3">AI Agent Actions</h3>
@@ -482,6 +486,148 @@ export default function InvestmentCategoryPage() {
       )}
     </div>
   )
+}
+
+function MarketHistoryChart({
+  history,
+  quantity,
+  isLoading,
+  symbol
+}: {
+  history: Array<{ label: string; price: number }>
+  quantity: number
+  isLoading: boolean
+  symbol: string
+}) {
+  const chartId = `holdingArea-${symbol}`
+  const source = history.length > 0 ? history : getMockHistory(symbol)
+  const data = source.map((point) => ({
+    label: point.label,
+    value: Math.max(0, Math.round((point.price || 0) * quantity))
+  }))
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium">Market Value History</h3>
+        <span className="text-xs text-muted-foreground">5-year trend</span>
+      </div>
+      <div className="h-44 relative">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id={chartId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+            <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${Math.round(v / 1000)}k`} />
+            <Area type="monotone" dataKey="value" stroke="#16a34a" strokeWidth={2} fillOpacity={1} fill={`url(#${chartId})`} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  )
+}
+
+function LatestNewsSection({
+  newsItems,
+  isLoading,
+  symbol
+}: {
+  newsItems: Array<{ title: string; source: string; link: string; published: number | null; summary?: string }>
+  isLoading: boolean
+  symbol: string
+}) {
+  const items = newsItems.length > 0 ? newsItems : getMockNews(symbol)
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium">Latest News & Signals</h3>
+        <Badge variant="outline" className="text-xs">
+          Curated
+        </Badge>
+      </div>
+      <div className="space-y-3 relative">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {items.map((news, idx) => (
+          <a
+            key={`${news.title}-${idx}`}
+            href={news.link || "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="block rounded-xl border p-3 hover:bg-muted/30 transition-colors"
+          >
+            <p className="text-sm font-medium">{news.title}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {news.source} · {formatRelativeTime(news.published)}
+            </p>
+            {news.summary && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{news.summary}</p>}
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function getMockHistory(symbol: string) {
+  const now = new Date()
+  return Array.from({ length: 10 }).map((_, idx) => {
+    const date = new Date(now.getFullYear() - (9 - idx), now.getMonth(), 1)
+    return {
+      label: `${date.toLocaleString("default", { month: "short" })} ${date.getFullYear()}`,
+      price: 50 + idx * 5 + Math.sin(idx) * 8
+    }
+  })
+}
+
+function getMockNews(symbol: string) {
+  return [
+    {
+      title: `${symbol} earnings beat expectations`,
+      source: "Bloomberg",
+      summary: `${symbol} reported stronger than expected topline growth driven by resilient enterprise demand.`,
+      published: Date.now() / 1000 - 3600,
+      link: "#"
+    },
+    {
+      title: `${symbol} expands AI footprint with new partnerships`,
+      source: "Reuters",
+      summary: `Management announced a multi-year collaboration focusing on accelerated computing workloads.`,
+      published: Date.now() / 1000 - 6 * 3600,
+      link: "#"
+    },
+    {
+      title: `${symbol} technicals suggest consolidation`,
+      source: "CNBC",
+      summary: `Momentum indicators enter overbought territory after a strong rally, traders watch support levels.`,
+      published: Date.now() / 1000 - 12 * 3600,
+      link: "#"
+    }
+  ]
+}
+
+function formatRelativeTime(timestamp: number | null) {
+  if (!timestamp) return "recent"
+  const diffMs = Date.now() - timestamp * 1000
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60))
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.round(diffHours / 24)
+  if (diffDays < 30) return `${diffDays}d ago`
+  const diffMonths = Math.round(diffDays / 30)
+  return `${diffMonths}mo ago`
 }
 
 function generateMockPriceHistory(symbol: string) {
