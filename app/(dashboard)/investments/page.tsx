@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { StatCard } from "@/components/ui/stat-card"
 import { formatCurrency } from "@/lib/format"
-import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { AskAIBankerWidget, AskAIButton } from "@/components/ai/ask-ai-banker-widget"
 import {
   TrendingUp,
   TrendingDown,
@@ -24,6 +24,8 @@ import {
   ChevronRight,
   ArrowRight,
   Loader2,
+  Lightbulb,
+  AlertTriangle,
 } from "lucide-react"
 import {
   PieChart as RechartsPieChart,
@@ -166,12 +168,87 @@ export default function InvestmentsPage() {
 
   const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#64748b', '#06b6d4'];
 
+  const sortedByValue = [...userHoldings].sort((a, b) => b.value - a.value)
+  const topHolding = sortedByValue[0]
+  const concentration =
+    totalValue > 0 && topHolding ? ((topHolding.value / totalValue) * 100).toFixed(1) : "0.0"
+
+  const sortedByGain = [...userHoldings].sort((a, b) => b.gainPercent - a.gainPercent)
+  const topGainers = sortedByGain.slice(0, 3).filter((h) => h.gainPercent > 0)
+  const topLosers = sortedByGain.slice(-3).filter((h) => h.gainPercent < 0)
+
   const aiQuestions = [
     "How is my portfolio performing?",
     "Rebalance my portfolio",
     "Suggest new investment opportunities",
     "Analyze my risk exposure",
   ]
+
+  const insights = useMemo(() => {
+    const items: {
+      id: string
+      tone: "positive" | "negative" | "neutral"
+      title: string
+      detail: string
+      source: string
+    }[] = []
+
+    if (totalValue > 0) {
+      items.push({
+        id: "portfolio-return",
+        tone: totalGain >= 0 ? "positive" : "negative",
+        title:
+          totalGain >= 0
+            ? `Portfolio is up ${totalGainPercent}% vs cost basis`
+            : `Portfolio is down ${Math.abs(Number(totalGainPercent)).toFixed(2)}% vs cost basis`,
+        detail: `${formatCurrency(totalGain, "USD")} ${totalGain >= 0 ? "unrealized gain" : "unrealized loss"} across all holdings.`,
+        source: "Portfolio Holdings",
+      })
+    }
+
+    if (topHolding) {
+      const conc = Number(concentration)
+      items.push({
+        id: "concentration",
+        tone: conc > 40 ? "negative" : "neutral",
+        title: `Largest position ${topHolding.symbol} is ${concentration}% of your portfolio`,
+        detail:
+          conc > 40
+            ? "Exposure is concentrated in a single name. Consider whether this matches your risk tolerance."
+            : "Concentration in the top holding is within a typical range for focused portfolios.",
+        source: "Position Sizing",
+      })
+    }
+
+    if (topGainers.length > 0) {
+      const g = topGainers[0]
+      items.push({
+        id: "top-gainer",
+        tone: "positive",
+        title: `${g.symbol} is your top performer`,
+        detail: `${g.name} is up ${g.gainPercent.toFixed(1)}% vs cost basis with unrealized gain of ${formatCurrency(
+          g.gain,
+          "USD",
+        )}.`,
+        source: "Performance",
+      })
+    }
+
+    if (topLosers.length > 0) {
+      const l = topLosers[topLosers.length - 1]
+      items.push({
+        id: "top-loser",
+        tone: "negative",
+        title: `${l.symbol} is dragging performance`,
+        detail: `${l.name} is down ${Math.abs(l.gainPercent).toFixed(
+          1,
+        )}% vs cost basis. Review whether the original thesis still holds.`,
+        source: "Performance",
+      })
+    }
+
+    return items
+  }, [totalValue, totalGain, totalGainPercent, topHolding, concentration, topGainers, topLosers])
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -201,13 +278,69 @@ export default function InvestmentsPage() {
           description={`${totalGainPercent}% all-time return`}
           trend={{ value: Number(totalGainPercent), direction: totalGain >= 0 ? "up" : "down" }}
         />
-        <StatCard 
-            title="Active Holdings" 
-            value={userHoldings.length.toString()} 
-            icon={BarChart3} 
-            description="Across 4 asset classes" 
+        <StatCard
+          title="Active Holdings"
+          value={userHoldings.length.toString()}
+          icon={BarChart3}
+          description="Across 4 asset classes"
         />
       </div>
+
+      {/* AI-style Insights List */}
+      {insights.length > 0 && (
+        <Card className="border border-border/80">
+          <CardHeader className="pb-3">
+            <CardTitle>What Changed in Your Portfolio</CardTitle>
+            <CardDescription>Key movements and risks based on your current positions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {insights.map((insight) => {
+              const isPositive = insight.tone === "positive"
+              const Icon = isPositive ? Lightbulb : AlertTriangle
+              const iconBg =
+                insight.tone === "positive"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : insight.tone === "negative"
+                    ? "bg-rose-50 text-rose-600"
+                    : "bg-slate-50 text-slate-600"
+
+              return (
+                <div
+                  key={insight.id}
+                  className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+                >
+                  <div
+                    className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full text-xs ${iconBg}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                    <p className="text-xs text-muted-foreground">{insight.detail}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Badge variant="outline" className="text-[11px]">
+                        {insight.source}
+                      </Badge>
+                      <AskAIButton
+                        agentId="investmentor"
+                        initialQuestion={`Explain this portfolio insight: ${insight.title}. Details: ${insight.detail}`}
+                      >
+                        <button
+                          type="button"
+                          className="ml-auto text-[11px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                        >
+                          Explain
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </AskAIButton>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content: Asset Classes Grid */}
@@ -242,7 +375,7 @@ export default function InvestmentsPage() {
             </div>
         </div>
 
-        {/* Sidebar: Allocation & AI */}
+        {/* Sidebar: Allocation, Insights & AI */}
         <div className="space-y-6">
             <Card>
                 <CardHeader>
@@ -292,7 +425,76 @@ export default function InvestmentsPage() {
                 </CardContent>
             </Card>
 
-            <AskAIBankerWidget questions={aiQuestions} description="Get AI insights on your portfolio" />
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Portfolio Snapshot</CardTitle>
+                <CardDescription>Quick insights from your current holdings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {topHolding && (
+                  <div className="p-3 rounded-lg bg-muted/40">
+                    <p className="text-xs text-muted-foreground mb-1">Largest Position</p>
+                    <p className="text-sm font-medium">
+                      {topHolding.name} ({topHolding.symbol})
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatCurrency(topHolding.value, "USD")} · {concentration}% of portfolio ·{" "}
+                      {topHolding.gainPercent >= 0 ? "Up" : "Down"}{" "}
+                      {Math.abs(topHolding.gainPercent).toFixed(1)}%
+                    </p>
+                  </div>
+                )}
+
+                {topGainers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-emerald-700 mb-1">Top Gainers (all‑time)</p>
+                    <ul className="space-y-1">
+                      {topGainers.map((h) => (
+                        <li key={h.id} className="flex items-center justify-between text-xs">
+                          <span className="truncate mr-2">
+                            {h.name} ({h.symbol})
+                          </span>
+                          <span className="text-emerald-600 font-semibold">
+                            +{h.gainPercent.toFixed(1)}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {topLosers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-rose-700 mb-1">Biggest Drags</p>
+                    <ul className="space-y-1">
+                      {[...topLosers].reverse().map((h) => (
+                        <li key={h.id} className="flex items-center justify-between text-xs">
+                          <span className="truncate mr-2">
+                            {h.name} ({h.symbol})
+                          </span>
+                          <span className="text-rose-600 font-semibold">
+                            {h.gainPercent.toFixed(1)}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  These insights are based on your current holdings and unrealized profit/loss. Ask{" "}
+                  <span className="font-medium">AI Investmentor</span> to simulate rebalancing or stress‑test
+                  different market scenarios.
+                </p>
+              </CardContent>
+            </Card>
+
+            <AskAIBankerWidget
+              questions={aiQuestions}
+              description="Get AI insights on your portfolio"
+              title="Ask AI Investmentor"
+              agentId="investmentor"
+            />
         </div>
       </div>
     </div>

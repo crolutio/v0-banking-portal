@@ -26,6 +26,7 @@ import { StatCard } from "@/components/ui/stat-card"
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
 import { riskAlerts, users } from "@/lib/mock-data"
+import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import {
   Shield,
   AlertTriangle,
@@ -41,6 +42,7 @@ import {
   Gavel,
   Flag,
   XCircle,
+  Lightbulb,
 } from "lucide-react"
 import type { RiskAlert } from "@/lib/types"
 
@@ -103,6 +105,38 @@ export default function RiskCompliancePage() {
   const openAlerts = riskAlerts.filter((a) => a.status === "open").length
   const criticalAlerts = riskAlerts.filter((a) => a.severity === "critical").length
   const escalatedAlerts = riskAlerts.filter((a) => a.status === "escalated").length
+  const aiQuestions = [
+    "Summarize today's highest risk alerts",
+    "Which investigations require escalation?",
+    "What policy applies to this AML alert?",
+    "List evidence gathered for this case"
+  ]
+
+  const recentWindow = new Date()
+  recentWindow.setDate(recentWindow.getDate() - 7)
+  const recentAlerts = riskAlerts.filter((a) => new Date(a.createdAt) >= recentWindow)
+  const newCritical = recentAlerts.filter((a) => a.severity === "critical").length
+  const amlAlerts = riskAlerts.filter((a) => a.type === "aml").length
+  const fraudAlerts = riskAlerts.filter((a) => a.type === "fraud").length
+
+  const riskInsights = [
+    {
+      id: "recent",
+      title: `${recentAlerts.length} alert${recentAlerts.length !== 1 ? "s" : ""} created in the last 7 days`,
+      detail: `${newCritical} critical and ${recentAlerts.length - newCritical} non‑critical items require triage.`,
+    },
+    {
+      id: "aml-fraud",
+      title: "Mix of AML and fraud cases in the queue",
+      detail: `${amlAlerts} AML‑type and ${fraudAlerts} fraud‑type alerts are currently open or under investigation.`,
+    },
+    {
+      id: "escalations",
+      title: `${escalatedAlerts} alert${escalatedAlerts !== 1 ? "s" : ""} escalated for senior decision`,
+      detail:
+        "Ensure outcomes and rationales are documented to keep the audit trail complete and support future reviews.",
+    },
+  ]
 
   const getCustomerName = (userId?: string) => {
     if (!userId) return "System"
@@ -118,6 +152,32 @@ export default function RiskCompliancePage() {
           <p className="text-muted-foreground">Monitor alerts, manage cases, and ensure policy compliance</p>
         </div>
       </div>
+
+      <Card className="border border-border/80">
+        <CardContent className="space-y-3 pt-4">
+          {riskInsights.map((insight) => (
+            <div
+              key={insight.id}
+              className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+            >
+              <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                <Lightbulb className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                <p className="text-xs text-muted-foreground">{insight.detail}</p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <AskAIBankerWidget
+        agentId="risk_guardian"
+        title="Ask AI Risk Guardian"
+        description="Get contextual guidance on alerts, policies, and compliance actions"
+        questions={aiQuestions}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

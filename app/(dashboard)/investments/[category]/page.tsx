@@ -292,12 +292,14 @@ export default function InvestmentCategoryPage() {
             </Card>
 
             <AskAIBankerWidget 
-                questions={[
-                    `Is ${config.name} right for me?`,
-                    `What are the risks of ${config.name}?`,
-                    `Show me top performing ${config.name}`
-                ]}
-                description={`Ask about ${config.name}`}
+              questions={[
+                `Is ${config.name} right for me?`,
+                `What are the risks of ${config.name}?`,
+                `Show me top performing ${config.name}`
+              ]}
+              description={`Ask about ${config.name}`}
+              title="Ask AI Investmentor"
+              agentId="investmentor"
             />
         </div>
       </div>

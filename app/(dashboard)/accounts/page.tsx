@@ -15,7 +15,17 @@ import { ArrowUpRight, ArrowDownRight, Search, TrendingUp, Bot, Copy, Eye, EyeOf
 import type { Account, Transaction } from "@/lib/types"
 import { AskAIBankerWidget, AskAIButton } from "@/components/ai/ask-ai-banker-widget"
 import { createClient } from "@/lib/supabase/client"
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+
+function ArrowTrendingIcon({ tone }: { tone: "positive" | "negative" | "neutral" }) {
+  if (tone === "positive") {
+    return <ArrowDownRight className="h-3.5 w-3.5" />
+  }
+  if (tone === "negative") {
+    return <ArrowUpRight className="h-3.5 w-3.5" />
+  }
+  return <Search className="h-3.5 w-3.5" />
+}
 
 function AccountCard({ account, onClick }: { account: Account; onClick: () => void }) {
   const [showBalance, setShowBalance] = useState(true)
@@ -524,6 +534,107 @@ export default function AccountsPage() {
     "How can I reduce my monthly fees?",
   ]
 
+  const accountInsights = useMemo(() => {
+    const now = new Date()
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+    let thisMonthSpend = 0
+    let lastMonthSpend = 0
+    let unusualCount = 0
+    const categoryTotals: Record<string, number> = {}
+
+    transactions.forEach((t) => {
+      const d = new Date(t.date)
+      if (Number.isNaN(d.getTime())) return
+
+      if (t.isUnusual) unusualCount += 1
+
+      if (t.type === "debit") {
+        if (d >= thisMonthStart) {
+          thisMonthSpend += t.amount
+          const key = (t.category || "other").toLowerCase()
+          categoryTotals[key] = (categoryTotals[key] || 0) + Math.abs(t.amount)
+        } else if (d >= lastMonthStart && d < thisMonthStart) {
+          lastMonthSpend += t.amount
+        }
+      }
+    })
+
+    const diff = thisMonthSpend - lastMonthSpend
+    const diffPct =
+      lastMonthSpend > 0 ? ((diff / lastMonthSpend) * 100).toFixed(1) : thisMonthSpend > 0 ? "100.0" : "0.0"
+
+    const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
+
+    const items: { id: string; title: string; detail: string; tone: "positive" | "negative" | "neutral" }[] = []
+
+    if (thisMonthSpend > 0) {
+      items.push({
+        id: "spend-trend",
+        tone: diff <= 0 ? "positive" : "negative",
+        title:
+          diff <= 0
+            ? `Spending is down ${Math.abs(Number(diffPct)).toFixed(1)}% vs last month`
+            : `Spending is up ${Number(diffPct).toFixed(1)}% vs last month`,
+        detail: `This month you've spent ${formatCurrency(thisMonthSpend)} on debits across all accounts.`,
+      })
+    }
+
+    if (topCategoryEntry) {
+      const [cat, value] = topCategoryEntry
+      items.push({
+        id: "top-category",
+        tone: "neutral",
+        title: `Top category this month: ${cat.replace("_", " ")}`,
+        detail: `You've spent ${formatCurrency(value)} in this category so far this month.`,
+      })
+    }
+
+    if (unusualCount > 0) {
+      items.push({
+        id: "unusual",
+        tone: "negative",
+        title: `${unusualCount} transaction${unusualCount > 1 ? "s" : ""} flagged as unusual`,
+        detail: "Review these items to confirm they are expected and detect any potential fraud early.",
+      })
+    }
+
+    return items
+  }, [transactions])
+
+  const transactionsPerMonth = useMemo(() => {
+    const totals: Record<string, number> = {}
+
+    transactions.forEach((txn) => {
+      const txnDate = new Date(txn.date)
+      if (Number.isNaN(txnDate.getTime())) return
+      const key = `${txnDate.getFullYear()}-${txnDate.getMonth()}`
+      const numericAmount = Number(txn.amount) || 0
+      totals[key] = (totals[key] || 0) + Math.abs(numericAmount)
+    })
+
+    const now = new Date()
+    const data = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${d.getMonth()}`
+      data.push({
+        month: d.toLocaleString("default", { month: "short" }),
+        total: totals[key] || 0,
+      })
+    }
+    return data
+  }, [transactions])
+
+  const totalRecentVolume = useMemo(
+    () => transactionsPerMonth.reduce((sum, bucket) => sum + bucket.total, 0),
+    [transactionsPerMonth],
+  )
+  const latestMonthVolume = transactionsPerMonth.length
+    ? transactionsPerMonth[transactionsPerMonth.length - 1].total
+    : 0
+
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
@@ -607,6 +718,93 @@ export default function AccountsPage() {
           <AskAIBankerWidget questions={aiQuestions} description="Get insights about your accounts" />
         </div>
       </div>
+
+      {/* Account Insights List */}
+      {accountInsights.length > 0 && (
+        <Card className="border border-border/80">
+          <CardHeader className="pb-3">
+            <CardTitle>What Changed in Your Accounts</CardTitle>
+            <CardDescription>Summary of recent spending patterns and risk signals</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {accountInsights.map((insight) => (
+              <div
+                key={insight.id}
+                className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+              >
+                <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <ArrowTrendingIcon tone={insight.tone} />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                  <p className="text-xs text-muted-foreground">{insight.detail}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monthly Transaction Volume Trend */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Monthly Transaction Volume</CardTitle>
+            <CardDescription>
+              Last 6 months · {formatCurrency(totalRecentVolume)} total movement
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {formatCurrency(latestMonthVolume)} last month
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={transactionsPerMonth} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="transactionsArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#9ec771" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#9ec771" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                <XAxis
+                  dataKey="month"
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#cbd5f5"
+                  axisLine={false}
+                  tickLine={false}
+                  fontSize={12}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={{ stroke: "#9ec771", strokeWidth: 1 }}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "none",
+                    boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+                  }}
+                  formatter={(value: number) => [formatCurrency(value), "Monthly total"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#8fbf58"
+                  strokeWidth={3}
+                  fill="url(#transactionsArea)"
+                  activeDot={{ r: 5, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Transactions */}
       <Card>

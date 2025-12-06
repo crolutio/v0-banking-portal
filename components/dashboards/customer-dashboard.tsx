@@ -13,7 +13,6 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Send,
   CreditCard,
   AlertTriangle,
   FileQuestion,
@@ -187,7 +186,7 @@ export function CustomerDashboard() {
   const upcomingPayments = useMemo(() => loans.reduce((sum, l) => sum + l.monthlyPayment, 0), [loans])
 
   const quickActions = [
-    { label: "Send Money", icon: Send, href: "/payments" },
+    { label: "View Accounts", icon: Wallet, href: "/accounts" },
     { label: "Freeze Card", icon: CreditCard, href: "/cards" },
     { label: "Dispute Transaction", icon: FileQuestion, href: "/support" },
     { label: "Apply for Loan", icon: Landmark, href: "/loans" },

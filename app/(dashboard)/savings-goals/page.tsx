@@ -775,6 +775,49 @@ export default function SavingsGoalsPage() {
   const totalTarget = savingsGoals.filter((g) => g.status !== "completed").reduce((sum, g) => sum + g.targetAmount, 0)
   const monthlyTotal = activeGoals.reduce((sum, g) => sum + g.monthlyContribution, 0)
 
+  const savingsInsights = (() => {
+    const items: { id: string; title: string; detail: string }[] = []
+
+    if (activeGoals.length > 0) {
+      items.push({
+        id: "coverage",
+        title: `You have ${activeGoals.length} active goal${activeGoals.length > 1 ? "s" : ""}`,
+        detail: `You're saving ${formatCurrency(
+          monthlyTotal,
+          "AED",
+        )} per month towards a remaining target of ${formatCurrency(totalTarget, "AED")}.`,
+      })
+    }
+
+    const mostUrgent = [...activeGoals].sort(
+      (a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime(),
+    )[0]
+    if (mostUrgent) {
+      const daysLeft =
+        (new Date(mostUrgent.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      const progress = (mostUrgent.currentAmount / mostUrgent.targetAmount) * 100
+      items.push({
+        id: "urgent-goal",
+        title: `${mostUrgent.name} is your most time‑sensitive goal`,
+        detail: `${progress.toFixed(0)}% funded with about ${Math.max(
+          0,
+          Math.round(daysLeft / 30),
+        )} month(s) left. Consider increasing monthly contributions if this is a priority.`,
+      })
+    }
+
+    const autoDebitCount = activeGoals.filter((g) => g.autoDebit).length
+    if (autoDebitCount > 0) {
+      items.push({
+        id: "auto-debit",
+        title: `Auto‑debit is enabled on ${autoDebitCount} goal${autoDebitCount > 1 ? "s" : ""}`,
+        detail: "Automatic transfers keep your savings on track without manual effort.",
+      })
+    }
+
+    return items
+  })()
+
   const handleGoalAction = async (action: string, goal: SavingsGoal) => {
     const supabase = createClient()
     
@@ -822,6 +865,27 @@ export default function SavingsGoalsPage() {
           New Goal
         </Button>
       </div>
+
+      {savingsInsights.length > 0 && (
+        <Card className="border border-border/80">
+          <CardContent className="space-y-3 pt-4">
+            {savingsInsights.map((insight) => (
+              <div
+                key={insight.id}
+                className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+              >
+                <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                  <p className="text-xs text-muted-foreground">{insight.detail}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main content area - 3 columns */}
@@ -954,7 +1018,12 @@ export default function SavingsGoalsPage() {
         {/* Sidebar with AI widget - 1 column */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
-            <AskAIBankerWidget questions={aiQuestions} description="Get tips to achieve your savings goals" />
+            <AskAIBankerWidget
+              questions={aiQuestions}
+              description="Get tips to achieve your savings goals"
+              title="Ask AI Savings Coach"
+              agentId="savings_coach"
+            />
           </div>
         </div>
       </div>

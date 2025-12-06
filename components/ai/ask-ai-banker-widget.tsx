@@ -13,19 +13,26 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { AIBankerChatInterface } from "@/components/ai/ai-banker-chat-interface"
+import { AIBankerChatInterface, AI_AGENT_THEMES } from "@/components/ai/ai-banker-chat-interface"
+import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
 
 interface AskAIBankerWidgetProps {
   questions: string[]
   title?: string
   description?: string
+  agentId?: AIAgentId
 }
 
 export function AskAIBankerWidget({
   questions,
-  title = "Ask AI Banker",
-  description = "Get instant answers about your finances",
+  title,
+  description,
+  agentId = "banker"
 }: AskAIBankerWidgetProps) {
+  const theme = AI_AGENT_THEMES[agentId] ?? AI_AGENT_THEMES.banker
+  const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
+  const displayTitle = title || `Ask ${persona.title}`
+  const displayDescription = description || persona.shortDescription
   const [open, setOpen] = useState(false)
   const [initialQuestion, setInitialQuestion] = useState("")
 
@@ -36,21 +43,27 @@ export function AskAIBankerWidget({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
+      <Card
+        className="border rounded-2xl"
+        style={{
+          backgroundImage: `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+          borderColor: theme.accentMuted
+        }}
+      >
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">{title}</CardTitle>
+              <theme.icon className="h-5 w-5" style={{ color: theme.accent }} />
+              <CardTitle className="text-lg">{displayTitle}</CardTitle>
             </div>
             {/* Sheet Trigger Button (Icon only) */}
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" onClick={() => setInitialQuestion("")}>
-                <MessageSquare className="h-5 w-5 text-primary" />
+                <MessageSquare className="h-5 w-5" style={{ color: theme.accent }} />
               </Button>
             </SheetTrigger>
           </div>
-          <CardDescription>{description}</CardDescription>
+          <CardDescription>{displayDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
@@ -59,7 +72,11 @@ export function AskAIBankerWidget({
                 key={question}
                 variant="secondary"
                 size="sm"
-                className="text-xs h-auto py-2 px-3 bg-background/50 hover:bg-background"
+                className="text-xs h-auto py-2 px-3"
+                style={{
+                  borderColor: theme.accent,
+                  color: theme.accent
+                }}
                 onClick={() => handleQuestionClick(question)}
               >
                 {question}
@@ -70,9 +87,9 @@ export function AskAIBankerWidget({
       </Card>
 
       <SheetContent className="sm:max-w-md w-[400px] p-0 flex flex-col">
-        <SheetTitle className="sr-only">AI Banker Chat</SheetTitle>
-        <SheetDescription className="sr-only">Chat with the AI Banker</SheetDescription>
-        <AIBankerChatInterface embedded={false} initialMessage={initialQuestion} />
+        <SheetTitle className="sr-only">{displayTitle}</SheetTitle>
+        <SheetDescription className="sr-only">Chat with the AI assistant</SheetDescription>
+        <AIBankerChatInterface embedded={false} initialMessage={initialQuestion} agentId={agentId} />
       </SheetContent>
     </Sheet>
   )
@@ -81,27 +98,31 @@ export function AskAIBankerWidget({
 export function AskAIButton({ 
   initialQuestion, 
   children,
-  className
+  className,
+  agentId = "banker"
 }: { 
   initialQuestion?: string
   children?: React.ReactNode 
   className?: string
+  agentId?: AIAgentId
 }) {
   const [open, setOpen] = useState(false)
+  const theme = AI_AGENT_THEMES[agentId] ?? AI_AGENT_THEMES.banker
+  const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         {children || (
           <Button variant="ghost" size="icon" className={className}>
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Sparkles className="h-4 w-4" style={{ color: theme.accent }} />
           </Button>
         )}
       </SheetTrigger>
       <SheetContent className="sm:max-w-md w-[400px] p-0 flex flex-col">
-        <SheetTitle className="sr-only">AI Banker Chat</SheetTitle>
-        <SheetDescription className="sr-only">Chat with the AI Banker</SheetDescription>
-        <AIBankerChatInterface embedded={false} initialMessage={initialQuestion} />
+        <SheetTitle className="sr-only">{persona.title}</SheetTitle>
+        <SheetDescription className="sr-only">Chat with the AI assistant</SheetDescription>
+        <AIBankerChatInterface embedded={false} initialMessage={initialQuestion} agentId={agentId} />
       </SheetContent>
     </Sheet>
   )

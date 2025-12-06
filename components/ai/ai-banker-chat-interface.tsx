@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
+import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import {
   Send,
@@ -49,7 +50,10 @@ import {
   Plus,
   Pin,
   PinOff,
-  MessageSquare
+  MessageSquare,
+  LineChart,
+  ShieldCheck,
+  PiggyBank
 } from "lucide-react"
 
 type ScopeOption = {
@@ -76,6 +80,70 @@ const suggestedPrompts = [
 ]
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+type AgentTheme = {
+  icon: typeof Bot
+  accent: string
+  accentMuted: string
+  gradientFrom: string
+  gradientTo: string
+  badgeBg: string
+  badgeText: string
+  placeholder: string
+  pulseColor: string
+  iconGradient: string
+}
+
+export const AI_AGENT_THEMES: Record<AIAgentId, AgentTheme> = {
+  banker: {
+    icon: Bot,
+    accent: "#4b5563",
+    accentMuted: "rgba(148,163,184,0.15)",
+    gradientFrom: "rgba(148,163,184,0.10)",
+    gradientTo: "rgba(16,185,129,0)",
+    badgeBg: "rgba(148,163,184,0.12)",
+    badgeText: "#374151",
+    placeholder: "Ask about your accounts...",
+    pulseColor: "#6b7280",
+    iconGradient: "linear-gradient(135deg, #e5e7eb, #cbd5f5)"
+  },
+  investmentor: {
+    icon: LineChart,
+    accent: "#1f2933",
+    accentMuted: "rgba(148,163,184,0.18)",
+    gradientFrom: "rgba(148,163,184,0.12)",
+    gradientTo: "rgba(99,102,241,0)",
+    badgeBg: "rgba(148,163,184,0.16)",
+    badgeText: "#1f2933",
+    placeholder: "Ask about your portfolio or markets...",
+    pulseColor: "#4b5563",
+    iconGradient: "linear-gradient(135deg, #e5e7eb, #d1d5db)"
+  },
+  risk_guardian: {
+    icon: ShieldCheck,
+    accent: "#92400e",
+    accentMuted: "rgba(250,204,21,0.15)",
+    gradientFrom: "rgba(250,204,21,0.16)",
+    gradientTo: "rgba(251,146,60,0)",
+    badgeBg: "rgba(254,243,199,0.8)",
+    badgeText: "#78350f",
+    placeholder: "Ask about alerts, policies, or investigations...",
+    pulseColor: "#f59e0b",
+    iconGradient: "linear-gradient(135deg, #fef3c7, #fde68a)"
+  },
+  savings_coach: {
+    icon: PiggyBank,
+    accent: "#854d0e",
+    accentMuted: "rgba(252,211,77,0.2)",
+    gradientFrom: "rgba(252,211,77,0.18)",
+    gradientTo: "rgba(244,114,182,0)",
+    badgeBg: "rgba(254,249,195,0.9)",
+    badgeText: "#78350f",
+    placeholder: "Ask about savings habits or goal progress...",
+    pulseColor: "#fbbf24",
+    iconGradient: "linear-gradient(135deg, #fef9c3, #fef3c7)"
+  }
+}
 
 const ChartRenderer = ({ data }: { data: any }) => {
   if (!data || !data.data || data.data.length === 0) return null;
@@ -171,10 +239,18 @@ const MessageContent = ({ content }: { content: string }) => {
 interface AIBankerChatInterfaceProps {
   embedded?: boolean
   initialMessage?: string
+  agentId?: AIAgentId
 }
 
-export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBankerChatInterfaceProps) {
+export function AIBankerChatInterface({
+  embedded = false,
+  initialMessage,
+  agentId = "banker"
+}: AIBankerChatInterfaceProps) {
   const { currentRole, currentUser } = useRole()
+  const theme = AI_AGENT_THEMES[agentId] ?? AI_AGENT_THEMES.banker
+  const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
+  const AgentIcon = theme.icon
   const [selectedScopes, setSelectedScopes] = useState<string[]>(["all"])
   const [escalateDialog, setEscalateDialog] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
@@ -183,7 +259,8 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
   const { messages, input, handleInputChange, handleSubmit, setMessages, isLoading, setInput, append, error } = useChat({
     api: "/api/chat",
     body: {
-      userId: currentUser?.id
+      userId: currentUser?.id,
+      agentId
     },
     // Removed initialMessages to avoid conflict with append
     onResponse: (response) => {
@@ -247,22 +324,32 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
       {!embedded && (
         <div className="pb-3 border-b flex items-center justify-between px-4 pt-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary-foreground" />
+            <div
+              className="h-10 w-10 rounded-full flex items-center justify-center shadow-sm"
+              style={{ backgroundImage: theme.iconGradient }}
+            >
+              <AgentIcon className="h-5 w-5" style={{ color: "#fff" }} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">AI Banker</h3>
-              <p className="text-xs text-muted-foreground">Your personal banking assistant</p>
+              <h3 className="text-lg font-semibold">{persona.title}</h3>
+              <p className="text-xs text-muted-foreground">{persona.shortDescription}</p>
               <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span
+                  className="h-2 w-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: theme.pulseColor }}
+                />
                 {lastSyncedAt
                   ? `Live data refreshed at ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
                   : "Awaiting first response"}
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-xs">
-            <Sparkles className="h-3 w-3 mr-1" />
+          <Badge
+            variant="outline"
+            className="text-xs border px-2 py-1"
+            style={{ borderColor: theme.accent, color: theme.badgeText, backgroundColor: theme.badgeBg }}
+          >
+            <Sparkles className="h-3 w-3 mr-1" style={{ color: theme.accent }} />
             {currentRole === "retail_customer" || currentRole === "sme_customer" ? "Customer Mode" : "Staff Mode"}
           </Badge>
         </div>
@@ -300,8 +387,11 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
         <div className="py-4 space-y-6">
           {!messages || messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Bot className="h-8 w-8 text-primary" />
+              <div
+                className="h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-sm"
+                style={{ backgroundColor: theme.accentMuted }}
+              >
+                <AgentIcon className="h-8 w-8" style={{ color: theme.accent }} />
               </div>
               <h3 className="text-lg font-semibold mb-2">How can I help you today?</h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-md">
@@ -319,7 +409,11 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
                   <Badge
                     key={index}
                     variant="outline"
-                    className="cursor-pointer hover:bg-primary/10 py-2 px-3 text-sm"
+                    className="cursor-pointer py-2 px-3 text-sm border"
+                    style={{
+                      borderColor: theme.accent,
+                      color: theme.accent
+                    }}
                     onClick={() => handleSuggestedPrompt(prompt)}
                   >
                     {prompt}
@@ -334,8 +428,11 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
                 className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}
               >
                 {message.role === "assistant" && (
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
+                  <div
+                    className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
+                    style={{ backgroundImage: theme.iconGradient }}
+                  >
+                    <AgentIcon className="h-4 w-4" style={{ color: "#fff" }} />
                   </div>
                 )}
 
@@ -343,8 +440,9 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
                   <div
                     className={cn(
                       "rounded-2xl px-4 py-3",
-                      message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted",
+                      message.role === "user" ? "text-white" : "bg-muted",
                     )}
+                    style={message.role === "user" ? { backgroundColor: theme.accent } : undefined}
                   >
                     <MessageContent content={message.content} />
                   </div>
@@ -362,8 +460,11 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
           {/* Typing Indicator */}
           {isLoading && (
             <div className="flex gap-3">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-primary-foreground" />
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
+                style={{ backgroundImage: theme.iconGradient }}
+              >
+                <AgentIcon className="h-4 w-4" style={{ color: "#fff" }} />
               </div>
               <div className="bg-muted rounded-2xl px-4 py-3">
                 <div className="flex gap-1">
@@ -409,7 +510,7 @@ export function AIBankerChatInterface({ embedded = false, initialMessage }: AIBa
           className="flex gap-3"
         >
           <Input
-            placeholder="Ask about your accounts..."
+            placeholder={theme.placeholder}
             value={input || ""}
             onChange={handleInputChange}
             className="flex-1"

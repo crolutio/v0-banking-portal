@@ -1,6 +1,7 @@
 import { OpenAI } from "openai"
 import { OpenAIStream, StreamingTextResponse } from "ai"
 import { createDirectClient } from "@/lib/supabase/direct-client"
+import { getAgentPersona } from "@/lib/ai/agents"
 import { generateForecasts } from "@/lib/forecasting/simple-forecast"
 import { generateSavingsSuggestions } from "@/lib/savings/suggestions"
 
@@ -29,7 +30,8 @@ async function fetchData(table: string, userId: string, column = "user_id") {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId: requestedUserId } = await req.json()
+    const { messages, userId: requestedUserId, agentId } = await req.json()
+    const persona = getAgentPersona(agentId)
 
     console.log("Checking API Keys:", { 
       hasOpenAI: !!process.env.OPENAI_API_KEY, 
@@ -62,8 +64,7 @@ export async function POST(req: Request) {
       goals,
       rewardProfileResult,
       rewardActivities,
-      supportTickets,
-      budgets
+      supportTickets
     ] = await Promise.all([
       fetchData("cards", userId),
       fetchData("loans", userId),
@@ -72,8 +73,7 @@ export async function POST(req: Request) {
       fetchData("savings_goals", userId),
       fetchData("reward_profiles", userId), // This returns an array, we take first
       fetchData("reward_activities", userId),
-      fetchData("support_tickets", userId),
-      fetchData("budgets", userId)
+      fetchData("support_tickets", userId)
     ])
 
     // 3. Fetch Transactions (using account IDs)
@@ -186,23 +186,6 @@ export async function POST(req: Request) {
       return acc
     }, {})
 
-    const budgetAlerts = budgets.map((b: any) => {
-      const spend = thisMonthSpendingByCategory[b.category.toLowerCase()] || 0
-      const limit = Number(b.amount)
-      const percentage = (spend / limit) * 100
-      
-      if (percentage >= 80) {
-        return {
-          category: b.category,
-          spend,
-          limit,
-          percentage: Math.round(percentage),
-          status: percentage >= 100 ? "exceeded" : "warning"
-        }
-      }
-      return null
-    }).filter(Boolean)
-
     const oldestTx = transactions.length > 0 ? transactions[transactions.length - 1].date : null
     const newestTx = transactions.length > 0 ? transactions[0].date : null
 
@@ -224,7 +207,6 @@ export async function POST(req: Request) {
         : null,
       recentTransactions,
       unusualActivity,
-      budgetAlerts,
       forecasts: {
         nextMonthTotal: totalPredictedSpend,
         breakdown: forecasts
@@ -234,8 +216,10 @@ export async function POST(req: Request) {
 
     // Prepare System Prompt
     const systemPrompt = `
-You are an AI Banker Assistant for "Bank of the Future". You have access to the user's complete financial data.
-Your goal is to provide accurate, helpful, and concise financial advice.
+${persona.personaPrompt}
+
+You work for "Bank of the Future" and have access to the user's complete financial data.
+Your goal is to provide accurate, helpful, and concise advice that matches your specialization.
 
 USER CONTEXT:
 - ID: ${userId}

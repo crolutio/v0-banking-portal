@@ -21,7 +21,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   Home,
   Wallet,
-  ArrowLeftRight,
   CreditCard,
   Landmark,
   TrendingUp,
@@ -38,7 +37,6 @@ import {
   Store,
   PiggyBank,
   Gift,
-  PieChart,
 } from "lucide-react"
 
 interface NavItem {
@@ -51,8 +49,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Accounts", href: "/accounts", icon: Wallet },
-  { label: "Budgets", href: "/budgets", icon: PieChart },
-  { label: "Payments & Transfers", href: "/payments", icon: ArrowLeftRight },
   { label: "Cards", href: "/cards", icon: CreditCard },
   { label: "Savings Goals", href: "/savings-goals", icon: PiggyBank },
   { label: "Loans", href: "/loans", icon: Landmark },
@@ -130,7 +126,7 @@ function Sidebar({ className }: { className?: string }) {
 
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border">
+      <div className="flex items-center gap-2 px-4 h-16 border-b border-sidebar-border">
         <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
           <Building2 className="h-5 w-5 text-primary-foreground" />
         </div>
