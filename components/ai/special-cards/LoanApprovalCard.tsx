@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { CheckCircle2, AlertTriangle, Info, Calculator, ArrowRight } from "lucide-react"
 import type { LoanPreApprovalResult } from "@/lib/calculations/loan-preapproval"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 
 interface LoanApprovalCardProps {
   data: LoanPreApprovalResult
@@ -26,6 +27,34 @@ export function LoanApprovalCard({ data }: LoanApprovalCardProps) {
     requestedAmount,
     requestedTerm
   } = data
+  
+  const { openChatWithMessage } = useFloatingChat()
+  
+  const handleApplyNow = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.stopImmediatePropagation) {
+      e.stopImmediatePropagation()
+    }
+    setTimeout(() => {
+      openChatWithMessage(
+        `I'd like to proceed with applying for the loan of AED ${requestedAmount.toLocaleString()} for ${requestedTerm} months. Can you guide me through the application process?`
+      )
+    }, 0)
+  }
+  
+  const handleSimulatePayment = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.stopImmediatePropagation) {
+      e.stopImmediatePropagation()
+    }
+    setTimeout(() => {
+      openChatWithMessage(
+        `Can you simulate the payment schedule for a loan of AED ${requestedAmount.toLocaleString()} at ${interestRate}% APR over ${requestedTerm} months? Show me the breakdown of principal and interest for each payment.`
+      )
+    }, 0)
+  }
 
   // Determine DTI color
   const getDTIColor = (dti: number) => {
@@ -43,6 +72,7 @@ export function LoanApprovalCard({ data }: LoanApprovalCardProps) {
   return (
     <Card 
       className="my-4 border-2 overflow-hidden"
+      onClick={(e) => e.stopPropagation()}
       style={{
         backgroundImage: approved 
           ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(22, 163, 74, 0.02))'
@@ -203,12 +233,22 @@ export function LoanApprovalCard({ data }: LoanApprovalCardProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <Button className="flex-1" disabled={!approved}>
+        <div className="flex gap-3 pt-2" onClick={(e) => e.stopPropagation()}>
+          <Button 
+            type="button"
+            className="flex-1" 
+            disabled={!approved}
+            onClick={handleApplyNow}
+          >
             Apply Now
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
-          <Button variant="outline" className="flex-1">
+          <Button 
+            type="button"
+            variant="outline" 
+            className="flex-1"
+            onClick={handleSimulatePayment}
+          >
             <Calculator className="h-4 w-4 mr-2" />
             Simulate Payment
           </Button>

@@ -39,16 +39,11 @@ export function AskAIBankerWidget({
       }}
     >
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <theme.icon className="h-5 w-5" style={{ color: theme.accent }} />
-            <CardTitle className="text-lg">{displayTitle}</CardTitle>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => openChatWithMessage("", agentId)}>
-            <MessageSquare className="h-5 w-5" style={{ color: theme.accent }} />
-          </Button>
+        <div className="flex items-center gap-2">
+          <theme.icon className="h-5 w-5 text-foreground" />
+          <CardTitle className="text-lg text-foreground">{displayTitle}</CardTitle>
         </div>
-        <CardDescription>{displayDescription}</CardDescription>
+        <CardDescription className="text-muted-foreground">{displayDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-2">
@@ -57,11 +52,7 @@ export function AskAIBankerWidget({
               key={question}
               variant="secondary"
               size="sm"
-              className="text-xs h-auto py-2 px-3 whitespace-normal text-left justify-start w-full"
-              style={{
-                borderColor: theme.accent,
-                color: theme.accent
-              }}
+              className="text-xs h-auto py-2 px-3 whitespace-normal text-left justify-start w-full hover:bg-accent/50 text-foreground border border-border"
               onClick={() => handleQuestionClick(question)}
             >
               {question}

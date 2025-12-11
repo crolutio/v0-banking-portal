@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sparkles, TrendingDown, ArrowRight, Check } from "lucide-react"
 import type { SpendingOptimizationResult } from "@/lib/calculations/spending-optimizer"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 
 interface OptimizationResultCardProps {
   data: SpendingOptimizationResult
@@ -13,6 +14,38 @@ interface OptimizationResultCardProps {
 
 export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
   const { totalMonthlySavings, totalAnnualSavings, opportunities, recommendations } = data
+  const { openChatWithMessage } = useFloatingChat()
+
+  const handleStartOptimizing = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.stopImmediatePropagation) {
+      e.stopImmediatePropagation()
+    }
+    const topOpportunity = opportunities[0]
+    if (topOpportunity) {
+      // Use setTimeout to ensure the event has fully propagated
+      setTimeout(() => {
+        openChatWithMessage(
+          `I want to start optimizing my ${topOpportunity.subcategory} spending. Can you create a detailed action plan for me to save AED ${Math.round(topOpportunity.monthlySavings)}/month?`
+        )
+      }, 0)
+    }
+  }
+
+  const handleScheduleReview = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.stopImmediatePropagation) {
+      e.stopImmediatePropagation()
+    }
+    // Use setTimeout to ensure the event has fully propagated
+    setTimeout(() => {
+      openChatWithMessage(
+        `I'd like to schedule a review of my spending optimization plan. Can you help me set up a reminder and track my progress on these ${opportunities.length} savings opportunities?`
+      )
+    }, 0)
+  }
 
   return (
     <Card 
@@ -165,12 +198,35 @@ export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
+        <div className="flex gap-3 pt-2" onClick={(e) => e.stopPropagation()}>
+          <Button 
+            type="button"
+            className="flex-1 bg-purple-600 hover:bg-purple-700"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.stopImmediatePropagation) {
+                e.stopImmediatePropagation()
+              }
+              handleStartOptimizing(e)
+            }}
+          >
             Start Optimizing
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
-          <Button variant="outline" className="flex-1">
+          <Button 
+            type="button"
+            variant="outline" 
+            className="flex-1"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.stopImmediatePropagation) {
+                e.stopImmediatePropagation()
+              }
+              handleScheduleReview(e)
+            }}
+          >
             Schedule Review
           </Button>
         </div>

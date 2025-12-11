@@ -28,9 +28,17 @@ function ArrowTrendingIcon({ tone }: { tone: "positive" | "negative" | "neutral"
   return <Search className="h-3.5 w-3.5" />
 }
 
-function AccountCard({ account, onClick }: { account: Account; onClick: () => void }) {
-  const [showBalance, setShowBalance] = useState(true)
-
+function AccountCard({ 
+  account, 
+  onClick, 
+  showBalance, 
+  onToggleBalance 
+}: { 
+  account: Account
+  onClick: () => void
+  showBalance: boolean
+  onToggleBalance: () => void
+}) {
   const getAccountIcon = () => {
     switch (account.type) {
       case "savings":
@@ -75,7 +83,7 @@ function AccountCard({ account, onClick }: { account: Account; onClick: () => vo
             className="h-8 w-8"
             onClick={(e) => {
               e.stopPropagation()
-              setShowBalance(!showBalance)
+              onToggleBalance()
             }}
           >
             {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -223,15 +231,17 @@ function TransactionsTable({
                         <p className="text-sm font-medium truncate">{txn.description}</p>
                         {txn.merchant && <p className="text-xs text-muted-foreground truncate">{txn.merchant}</p>}
                       </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <AskAIButton 
-                          initialQuestion={`Explain this transaction: ${txn.description} for ${formatCurrency(txn.amount)} on ${formatDate(txn.date)}`}
+                      <AskAIButton 
+                        initialQuestion={`Explain this transaction: ${txn.description} for ${formatCurrency(txn.amount)} on ${formatDate(txn.date)}`}
+                      >
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-6 px-2 text-[10px] border-primary/30 text-primary hover:bg-primary/10 hover:border-primary transition-all"
                         >
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <Sparkles className="h-3 w-3 text-primary" />
-                          </Button>
-                        </AskAIButton>
-                      </div>
+                          Ask AI
+                        </Button>
+                      </AskAIButton>
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
@@ -285,6 +295,7 @@ function TransactionsTable({
 }
 
 function AccountInsightsPanel({ account, transactions }: { account: Account, transactions: Transaction[] }) {
+  const { openChatWithMessage } = useFloatingChat()
   // Use passed transactions instead of fetching them
   const thisMonthSpend = transactions
     .filter((t) => {
@@ -353,7 +364,7 @@ function AccountInsightsPanel({ account, transactions }: { account: Account, tra
             variant="link" 
             size="sm" 
             className="px-0 mt-2 text-primary"
-            onClick={() => openChatWithMessage(`Tell me more about my ${account.type} account ending in ${account.account_number.slice(-4)}`)}
+            onClick={() => openChatWithMessage(`Tell me more about my ${account.type} account ending in ${account.accountNumber.slice(-4)}`)}
           >
             Ask more about this account
           </Button>
@@ -446,6 +457,7 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showAllBalances, setShowAllBalances] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
@@ -535,19 +547,23 @@ export default function AccountsPage() {
   }, 0), [accounts])
 
   const aiQuestions = [
-    "What's my current account balance?",
-    "Show my spending breakdown this month",
-    "Which account has the highest interest rate?",
-    "How can I reduce my monthly fees?",
+    "Analyze my transaction patterns and identify any unusual activity",
+    "Show me a detailed spending breakdown by category this month",
+    "Compare my accounts and recommend which one to use for savings",
+    "Help me optimize my account structure to reduce fees",
   ]
 
   const accountInsights = useMemo(() => {
     const now = new Date()
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    // Compare last 30 days with the 30 days before that
+    const thirtyDaysAgo = new Date(now)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const sixtyDaysAgo = new Date(now)
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
 
-    let thisMonthSpend = 0
-    let lastMonthSpend = 0
+    let last30DaysSpend = 0
+    let previous30DaysSpend = 0
     let unusualCount = 0
     const categoryTotals: Record<string, number> = {}
 
@@ -558,33 +574,45 @@ export default function AccountsPage() {
       if (t.isUnusual) unusualCount += 1
 
       if (t.type === "debit") {
-        if (d >= thisMonthStart) {
-          thisMonthSpend += t.amount
+        // Last 30 days
+        if (d >= thirtyDaysAgo && d <= now) {
+          last30DaysSpend += t.amount
           const key = (t.category || "other").toLowerCase()
           categoryTotals[key] = (categoryTotals[key] || 0) + Math.abs(t.amount)
-        } else if (d >= lastMonthStart && d < thisMonthStart) {
-          lastMonthSpend += t.amount
+        } 
+        // Previous 30 days (31-60 days ago)
+        else if (d >= sixtyDaysAgo && d < thirtyDaysAgo) {
+          previous30DaysSpend += t.amount
         }
       }
     })
 
-    const diff = thisMonthSpend - lastMonthSpend
-    const diffPct =
-      lastMonthSpend > 0 ? ((diff / lastMonthSpend) * 100).toFixed(1) : thisMonthSpend > 0 ? "100.0" : "0.0"
+    const diff = last30DaysSpend - previous30DaysSpend
+    
+    // Calculate percentage change, but cap extreme values for better UX
+    let diffPct = 0
+    if (previous30DaysSpend > 0) {
+      const rawPct = (diff / previous30DaysSpend) * 100
+      // Cap at ±100% for more reasonable display
+      diffPct = Math.max(-100, Math.min(100, rawPct))
+    } else if (last30DaysSpend > 0) {
+      diffPct = 100
+    }
 
     const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
 
     const items: { id: string; title: string; detail: string; tone: "positive" | "negative" | "neutral" }[] = []
 
-    if (thisMonthSpend > 0) {
+    if (last30DaysSpend > 0 && Math.abs(diff) > 10) {
+      // Only show spending trend if the difference is meaningful (>10 AED)
       items.push({
         id: "spend-trend",
         tone: diff <= 0 ? "positive" : "negative",
         title:
           diff <= 0
-            ? `Spending is down ${Math.abs(Number(diffPct)).toFixed(1)}% vs last month`
-            : `Spending is up ${Number(diffPct).toFixed(1)}% vs last month`,
-        detail: `This month you've spent ${formatCurrency(thisMonthSpend)} on debits across all accounts.`,
+            ? `Spending is down ${Math.abs(diffPct).toFixed(1)}% vs previous 30 days`
+            : `Spending is up ${Math.abs(diffPct).toFixed(1)}% vs previous 30 days`,
+        detail: `In the last 30 days you've spent ${formatCurrency(last30DaysSpend)} on debits across all accounts.`,
       })
     }
 
@@ -593,8 +621,8 @@ export default function AccountsPage() {
       items.push({
         id: "top-category",
         tone: "neutral",
-        title: `Top category this month: ${cat.replace("_", " ")}`,
-        detail: `You've spent ${formatCurrency(value)} in this category so far this month.`,
+        title: `Top category in last 30 days: ${cat.replace("_", " ")}`,
+        detail: `You've spent ${formatCurrency(value)} in this category over the last 30 days.`,
       })
     }
 
@@ -670,7 +698,12 @@ export default function AccountsPage() {
               <Sheet key={account.id}>
                 <SheetTrigger asChild>
                   <div>
-                    <AccountCard account={account} onClick={() => setSelectedAccount(account)} />
+                    <AccountCard 
+                      account={account} 
+                      onClick={() => setSelectedAccount(account)} 
+                      showBalance={showAllBalances}
+                      onToggleBalance={() => setShowAllBalances(!showAllBalances)}
+                    />
                   </div>
                 </SheetTrigger>
                 <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -730,14 +763,23 @@ export default function AccountsPage() {
       {accountInsights.length > 0 && (
         <Card className="border border-border/80">
           <CardHeader className="pb-3">
-            <CardTitle>What Changed in Your Accounts</CardTitle>
-            <CardDescription>Summary of recent spending patterns and risk signals</CardDescription>
+            <CardTitle>Spending Insights</CardTitle>
+            <CardDescription>Last 30 days compared to previous 30 days</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {accountInsights.map((insight) => (
               <div
                 key={insight.id}
-                className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3"
+                className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  if (insight.id === "spend-trend") {
+                    openChatWithMessage("Can you analyze my spending trend compared to last month and explain what caused the change?")
+                  } else if (insight.id === "top-category") {
+                    openChatWithMessage(`Why is my spending on ${insight.title.split(": ")[1]} so high this month? Show me the breakdown.`)
+                  } else if (insight.id === "unusual") {
+                    openChatWithMessage("Show me all unusual transactions and explain why they were flagged.")
+                  }
+                }}
               >
                 <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                   <ArrowTrendingIcon tone={insight.tone} />

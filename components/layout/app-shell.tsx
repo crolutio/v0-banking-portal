@@ -4,7 +4,9 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useRole, canAccessRMWorkspace, canAccessRiskCompliance, canAccessAdminConsole } from "@/lib/role-context"
 import { Button } from "@/components/ui/button"
@@ -36,6 +38,10 @@ import {
   Store,
   PiggyBank,
   Gift,
+  Sun,
+  Moon,
+  Monitor,
+  X,
 } from "lucide-react"
 import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
 
@@ -61,6 +67,74 @@ const navItems: NavItem[] = [
   { label: "Admin Console", href: "/admin", icon: Settings, roles: ["admin"] },
   { label: "Audit Log", href: "/audit", icon: ClipboardList, roles: ["risk_compliance", "admin"] },
 ]
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="h-9 w-9">
+        <Monitor className="h-4 w-4" />
+      </Button>
+    )
+  }
+
+  const getIcon = () => {
+    if (theme === "dark") return <Moon className="h-4 w-4" />
+    if (theme === "light") return <Sun className="h-4 w-4" />
+    return <Monitor className="h-4 w-4" />
+  }
+
+  const getLabel = () => {
+    if (theme === "dark") return "Dark"
+    if (theme === "light") return "Light"
+    return "System"
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-9 w-9">
+          {getIcon()}
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={() => setTheme("light")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Sun className="h-4 w-4" />
+          <span>Light</span>
+          {theme === "light" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => setTheme("dark")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Moon className="h-4 w-4" />
+          <span>Dark</span>
+          {theme === "dark" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => setTheme("system")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Monitor className="h-4 w-4" />
+          <span>System</span>
+          {theme === "system" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 function RoleSwitcher() {
   const { currentRole, currentUser, setRole, availableRoles } = useRole()
@@ -89,7 +163,11 @@ function RoleSwitcher() {
         <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {availableRoles.map(({ role, label, user }) => (
-          <DropdownMenuItem key={role} onClick={() => setRole(role)} className="flex items-center gap-3 py-2">
+          <DropdownMenuItem 
+            key={role} 
+            onClick={() => setRole(role)} 
+            className="flex items-center gap-3 py-2 focus:bg-accent/50 dark:focus:bg-accent/20"
+          >
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
               <AvatarFallback className="bg-primary/20 text-primary text-xs">
@@ -100,7 +178,7 @@ function RoleSwitcher() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-sm font-medium text-foreground">{user.name}</p>
               <p className="text-xs text-muted-foreground">{label}</p>
             </div>
             {currentRole === role && <Check className="h-4 w-4 text-primary" />}
@@ -111,7 +189,7 @@ function RoleSwitcher() {
   )
 }
 
-function Sidebar({ className }: { className?: string }) {
+function Sidebar({ className, onClose }: { className?: string; onClose?: () => void }) {
   const pathname = usePathname()
   const { currentRole } = useRole()
 
@@ -123,16 +201,38 @@ function Sidebar({ className }: { className?: string }) {
     return false
   })
 
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
-      <div className="flex items-center gap-2 px-4 h-16 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
-          <Building2 className="h-5 w-5 text-primary-foreground" />
+      <div className="flex items-center justify-between px-4 min-h-[120px] border-b border-sidebar-border">
+        <div className="flex items-center gap-3 py-8">
+          {mounted && (
+            <Image 
+              src={theme === "dark" ? "/aideology-logo.png" : "/aideology-logo-light.png"} 
+              alt="Aideology" 
+              width={192} 
+              height={192}
+              className="object-contain"
+            />
+          )}
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold tracking-tight">Bank of the Future</span>
-          <span className="text-[10px] text-sidebar-muted uppercase tracking-wider">Digital Banking</span>
-        </div>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8 lg:hidden hover:bg-sidebar-accent transition-all duration-200 hover:rotate-90"
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close sidebar</span>
+          </Button>
+        )}
       </div>
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
@@ -181,11 +281,18 @@ function Topbar() {
   if (!mounted) {
     return (
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
-          <div className="hidden lg:flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-semibold">Bank of the Future</span>
+          <div className="hidden lg:flex items-center gap-6 flex-1">
+            <span className="text-2xl font-semibold text-foreground">Bank of the Future</span>
+            <div className="flex flex-col mx-auto">
+              <span className="text-sm font-medium text-foreground text-center">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+              <span className="text-xs text-muted-foreground text-center">
+                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -194,7 +301,7 @@ function Topbar() {
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-1">
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="lg:hidden">
@@ -203,18 +310,26 @@ function Topbar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
-            <Sidebar className="h-full" />
+            <Sidebar className="h-full" onClose={() => setMobileMenuOpen(false)} />
           </SheetContent>
         </Sheet>
 
-        <div className="hidden lg:flex items-center gap-2">
-          <Building2 className="h-6 w-6 text-primary" />
-          <span className="font-semibold">Bank of the Future</span>
-          <DemoHelpTooltip />
+        <div className="hidden lg:flex items-center gap-6 flex-1">
+          <span className="text-2xl font-semibold text-foreground">Bank of the Future</span>
+          <div className="flex flex-col mx-auto">
+            <span className="text-sm font-medium text-foreground text-center">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+            <span className="text-xs text-muted-foreground text-center">
+              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
+        <DemoHelpTooltip />
+        <ThemeToggle />
         <RoleSwitcher />
       </div>
     </header>

@@ -4,13 +4,17 @@
  */
 
 export interface ScenarioDetection {
-  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'standard'
+  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'payment_schedule' | 'dispute_transaction' | 'review_suspicious_transactions' | 'standard'
   confidence: number
   context?: {
     travelDestination?: string
     loanAmount?: number
+    loanTerm?: number
+    interestRate?: number
     loanPurpose?: string
     clickedLoanId?: string
+    transactionDescription?: string
+    transactionAmount?: number
   }
 }
 
@@ -46,6 +50,24 @@ export function detectScenario(
   const travelDetection = detectTravelContext(lowerMessage)
   if (travelDetection.confidence > 0.6) {
     return travelDetection
+  }
+
+  // Check for payment schedule request
+  const paymentScheduleDetection = detectPaymentScheduleRequest(lowerMessage)
+  if (paymentScheduleDetection.confidence > 0.7) {
+    return paymentScheduleDetection
+  }
+
+  // Check for review suspicious transactions request
+  const reviewSuspiciousDetection = detectReviewSuspiciousTransactions(lowerMessage)
+  if (reviewSuspiciousDetection.confidence > 0.7) {
+    return reviewSuspiciousDetection
+  }
+
+  // Check for dispute transaction request
+  const disputeDetection = detectDisputeRequest(lowerMessage, conversationHistory)
+  if (disputeDetection.confidence > 0.7) {
+    return disputeDetection
   }
 
   // Check for loan details request
@@ -220,6 +242,81 @@ function extractTravelDestination(message: string): string | undefined {
     if (message.includes(destination)) {
       return destination.charAt(0).toUpperCase() + destination.slice(1)
     }
+  }
+  
+  return undefined
+}
+
+/**
+ * Detects requests for payment schedule simulation
+ * Example: "Can you simulate the payment schedule for a loan of AED 50,000 at 5.99% APR over 24 months?"
+ */
+function detectPaymentScheduleRequest(message: string): ScenarioDetection {
+  const scheduleKeywords = ['simulate', 'payment schedule', 'amortization', 'breakdown', 'payment plan', 'schedule']
+  const loanKeywords = ['loan', 'payment']
+  
+  const hasScheduleKeyword = scheduleKeywords.some(keyword => message.includes(keyword))
+  const hasLoanKeyword = loanKeywords.some(keyword => message.includes(keyword))
+  
+  if (hasScheduleKeyword && hasLoanKeyword) {
+    const amount = extractLoanAmount(message)
+    const term = extractLoanTerm(message)
+    const rate = extractInterestRate(message)
+    
+    return {
+      type: 'payment_schedule',
+      confidence: 0.9,
+      context: {
+        loanAmount: amount,
+        loanTerm: term,
+        interestRate: rate
+      }
+    }
+  }
+  
+  return {
+    type: 'standard',
+    confidence: 0.0
+  }
+}
+
+/**
+ * Helper: Extract loan term from message
+ */
+function extractLoanTerm(message: string): number | undefined {
+  // Look for patterns like "24 months" or "2 years" or "24"
+  const termPattern = /(\d+)\s*(?:months?|years?|month|year)/i
+  const match = message.match(termPattern)
+  
+  if (match) {
+    let term = parseInt(match[1])
+    // Convert years to months
+    if (message.toLowerCase().includes('year')) {
+      term = term * 12
+    }
+    return term
+  }
+  
+  // Try to find standalone number that might be term
+  const standalonePattern = /\b(\d{1,2})\b/
+  const standaloneMatch = message.match(standalonePattern)
+  if (standaloneMatch && parseInt(standaloneMatch[1]) <= 60) {
+    return parseInt(standaloneMatch[1])
+  }
+  
+  return undefined
+}
+
+/**
+ * Helper: Extract interest rate from message
+ */
+function extractInterestRate(message: string): number | undefined {
+  // Look for patterns like "5.99% APR" or "5.99%" or "5.99 percent"
+  const ratePattern = /(\d+\.?\d*)\s*%?\s*(?:apr|interest|rate|percent)?/i
+  const match = message.match(ratePattern)
+  
+  if (match) {
+    return parseFloat(match[1])
   }
   
   return undefined

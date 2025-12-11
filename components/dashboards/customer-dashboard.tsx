@@ -195,10 +195,9 @@ export function CustomerDashboard() {
   ]
 
   const aiChips = [
-    "How much did I spend on restaurants this month?",
-    "Why was I charged this fee?",
-    "Can I afford a 3,000 AED monthly payment?",
-    "Explain my credit card benefits",
+    "What subscriptions am I paying for and should I cancel any?",
+    "Help me plan a budget for next month",
+    "Show me my spending breakdown by category",
   ]
 
   if (isLoading) {
@@ -247,14 +246,14 @@ export function CustomerDashboard() {
           <CardContent>
             <div className="space-y-3">
               {transactions.length > 0 ? (
-                transactions.slice(0, 5).map((txn) => (
+                transactions.slice(0, 8).map((txn) => (
                   <div
                     key={txn.id}
-                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                    className="group flex items-center justify-between py-2 px-2 -mx-2 border-b border-border last:border-0 hover:bg-muted/30 rounded-lg transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                        className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${
                           txn.type === "credit" ? "bg-emerald-500/20" : "bg-muted"
                         }`}
                       >
@@ -264,8 +263,8 @@ export function CustomerDashboard() {
                           <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
                         )}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{txn.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{txn.description}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs text-muted-foreground">{formatDate(txn.date)}</span>
                           <Badge variant="secondary" className={`text-[10px] py-0 ${getCategoryColor(txn.category)}`}>
@@ -283,16 +282,29 @@ export function CustomerDashboard() {
                         </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-sm font-medium ${txn.type === "credit" ? "text-emerald-500" : "text-foreground"}`}>
                         {txn.type === "credit" ? "+" : "-"}
                         {formatCurrency(txn.amount)}
                       </span>
                       {txn.isUnusual && (
-                         <div title={txn.unusualReason || "Unusual activity detected"}>
-                            <AlertTriangle className="h-4 w-4 text-amber-500 cursor-help" />
-                         </div>
+                        <div title={txn.unusualReason || "Unusual activity detected"}>
+                          <AlertTriangle className="h-4 w-4 text-amber-500 cursor-help" />
+                        </div>
                       )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 px-2 text-[10px] border-primary/30 text-primary hover:bg-primary/10 hover:border-primary transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openChatWithMessage(`Explain this transaction: ${txn.description} for ${formatCurrency(txn.amount)} on ${formatDate(txn.date)}`)
+                        }}
+                      >
+                        Ask AI
+                      </Button>
                     </div>
+                  </div>
                 ))
               ) : (
                 <div className="text-center py-4 text-muted-foreground">No recent transactions</div>
@@ -326,19 +338,43 @@ export function CustomerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-yellow-500/30 bg-yellow-500/5">
+          <Card className="border-red-500/30 bg-red-500/5">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                <CardTitle className="text-sm text-yellow-500">Alert</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <CardTitle className="text-sm text-red-500">Suspicious Transactions</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Unusual spending detected in your account. Higher than average spending on entertainment this month.
-              </p>
-              <Button variant="link" size="sm" className="px-0 mt-2 text-primary">
-                Review Details
+              {transactions.filter(t => t.isUnusual).length > 0 ? (
+                <div className="space-y-3">
+                  {transactions.filter(t => t.isUnusual).slice(0, 3).map((txn) => (
+                    <div key={txn.id} className="flex items-start gap-2 text-sm p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+                      <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate text-foreground">{txn.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{txn.unusualReason}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">{formatCurrency(txn.amount)} · {formatDate(txn.date)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {transactions.filter(t => t.isUnusual).length > 3 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      +{transactions.filter(t => t.isUnusual).length - 3} more suspicious transactions
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No suspicious transactions detected.</p>
+              )}
+              <Button 
+                variant="default" 
+                size="sm"
+                className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all" 
+                onClick={() => openChatWithMessage("Can you review all my suspicious transactions and explain what makes them suspicious?")}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Review All with AI
               </Button>
             </CardContent>
           </Card>

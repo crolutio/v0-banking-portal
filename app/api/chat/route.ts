@@ -65,7 +65,9 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
+    
+    // Model fallback: gemma-3-27b-it -> gemma-3-12b-it
+    let model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
     // Default to Sarah Chen for demo if no user provided
     const userId = requestedUserId || "11111111-1111-1111-1111-111111111111"
@@ -152,12 +154,16 @@ export async function POST(req: Request) {
       return !Number.isNaN(txDate.getTime()) && txDate >= thirtyDaysAgo
     })
 
-    const monthlySpending = txLast30Days.reduce(
+    // Calculate spending - ONLY debits (exclude credits/income)
+    const spendingTxLast30Days = txLast30Days.filter((tx: any) => tx.type === 'debit')
+    
+    const monthlySpending = spendingTxLast30Days.reduce(
       (sum: number, tx: any) => sum + Math.abs(toNumber(tx.amount)),
       0,
     )
 
-    const categoryTotals = txLast30Days.reduce((acc: Record<string, number>, tx: any) => {
+    // Category totals - ONLY for spending (debits)
+    const categoryTotals = spendingTxLast30Days.reduce((acc: Record<string, number>, tx: any) => {
       const category = tx.category || "uncategorized"
       acc[category] = (acc[category] || 0) + Math.abs(toNumber(tx.amount))
       return acc
@@ -189,10 +195,12 @@ export async function POST(req: Request) {
       .filter((tx: any) => tx.is_unusual)
       .slice(0, 5)
       .map((tx: any) => ({
+        id: tx.id || `tx-${Date.now()}-${Math.random()}`,
         date: tx.date,
         description: tx.description,
         amount: toNumber(tx.amount),
         reason: tx.unusual_reason,
+        category: tx.category,
       }))
 
     // Calculate Budget Status (Calendar Month)
@@ -210,6 +218,11 @@ export async function POST(req: Request) {
     const oldestTx = transactions.length > 0 ? transactions[transactions.length - 1].date : null
     const newestTx = transactions.length > 0 ? transactions[0].date : null
 
+    // Calculate income for context
+    const monthlyIncome = txLast30Days
+      .filter((tx: any) => tx.type === 'credit')
+      .reduce((sum: number, tx: any) => sum + Math.abs(toNumber(tx.amount)), 0)
+
     const realTimeSnapshot = {
       generatedAt: now.toISOString(),
       dataSummary: {
@@ -222,6 +235,7 @@ export async function POST(req: Request) {
       totalBalance,
       availableCash,
       monthlySpendingLast30Days: monthlySpending,
+      monthlyIncomeLast30Days: monthlyIncome,
       daysCaptured: 30,
       topSpendingCategory: topCategoryEntry
         ? { category: topCategoryEntry[0], amount: topCategoryEntry[1] }
@@ -303,6 +317,63 @@ ${JSON.stringify(preApproval, null, 2)}
 Message tone: Professional, transparent, supportive.`
     }
     
+    // Handle payment schedule scenario
+    if (scenario.type === 'payment_schedule') {
+      const loanAmount = scenario.context?.loanAmount || 50000
+      const loanTerm = scenario.context?.loanTerm || 24
+      const interestRate = scenario.context?.interestRate || 5.99
+      
+      // Calculate payment schedule
+      const monthlyRate = interestRate / 100 / 12
+      const monthlyPayment = loanAmount * 
+        (monthlyRate * Math.pow(1 + monthlyRate, loanTerm)) /
+        (Math.pow(1 + monthlyRate, loanTerm) - 1)
+      
+      const schedule = []
+      let remainingBalance = loanAmount
+      
+      for (let month = 1; month <= loanTerm; month++) {
+        const interestPayment = remainingBalance * monthlyRate
+        const principalPayment = monthlyPayment - interestPayment
+        remainingBalance -= principalPayment
+        
+        schedule.push({
+          month,
+          payment: Math.round(monthlyPayment * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: Math.round(interestPayment * 100) / 100,
+          balance: Math.max(0, Math.round(remainingBalance * 100) / 100)
+        })
+      }
+      
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User wants a payment schedule simulation.
+
+LOAN DETAILS:
+- Loan Amount: AED ${loanAmount.toLocaleString()}
+- Interest Rate: ${interestRate}% APR
+- Term: ${loanTerm} months
+- Monthly Payment: AED ${Math.round(monthlyPayment * 100) / 100}
+
+INSTRUCTION: Display the payment schedule as a table showing:
+- Month number
+- Total payment
+- Principal portion
+- Interest portion
+- Remaining balance
+
+Format it as a markdown table using the \`\`\`table code block:
+
+\`\`\`table
+| Month | Payment (AED) | Principal (AED) | Interest (AED) | Remaining Balance (AED) |
+|-------|---------------|-----------------|----------------|-------------------------|
+${schedule.map(p => `| ${p.month} | ${p.payment.toLocaleString()} | ${p.principal.toLocaleString()} | ${p.interest.toLocaleString()} | ${p.balance.toLocaleString()} |`).join('\n')}
+\`\`\`
+
+Message tone: Clear, informative, helpful.`
+    }
+    
     // Handle spending analysis scenario
     if (scenario.type === 'spending_analysis') {
       const optimization = analyzeSpendingOptimization(typedTransactions)
@@ -323,6 +394,77 @@ ${JSON.stringify(optimization, null, 2)}
 \`\`\`
 
 Message tone: Analytical, helpful, action-oriented.`
+    }
+    
+    // Handle review suspicious transactions scenario
+    if (scenario.type === 'review_suspicious_transactions') {
+      const suspiciousTransactions = unusualActivity.map((tx: any) => ({
+        id: (tx as any).id || `tx-${Date.now()}-${Math.random()}`,
+        description: tx.description || 'Unknown Transaction',
+        amount: tx.amount || 0,
+        date: tx.date || new Date().toISOString(),
+        reason: tx.reason || 'Unusual activity detected',
+        category: tx.category || undefined
+      }))
+      
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User wants to review suspicious transactions.
+
+SUSPICIOUS TRANSACTIONS FOUND: ${suspiciousTransactions.length} transaction(s) flagged.
+
+INSTRUCTION: Briefly explain what makes these transactions suspicious, then display the suspicious transactions card:
+
+\`\`\`suspicious-transactions
+${JSON.stringify({ transactions: suspiciousTransactions }, null, 2)}
+\`\`\`
+
+Message tone: Helpful, clear, reassuring. Explain the flags without being alarmist.`
+    }
+    
+    // Handle dispute transaction scenario
+    if (scenario.type === 'dispute_transaction') {
+      // Find the disputed transaction from recent suspicious transactions
+      const disputedTx = unusualActivity.find((tx: any) => {
+        const desc = tx.description?.toLowerCase() || ''
+        const userMsg = lastUserMessage.toLowerCase()
+        return desc.includes('starbucks') && userMsg.includes('starbucks') ||
+               desc.includes('coffee') && userMsg.includes('coffee') ||
+               (scenario.context?.transactionDescription && desc.includes(scenario.context.transactionDescription.toLowerCase()))
+      }) || unusualActivity[0] // Fallback to first suspicious transaction
+      
+      if (disputedTx) {
+        const disputeData = {
+          disputes: [{
+            id: (disputedTx as any).id || `tx-${Date.now()}`,
+            description: disputedTx.description || 'Unknown Transaction',
+            amount: disputedTx.amount || 0,
+            date: disputedTx.date || new Date().toISOString(),
+            reason: disputedTx.reason || 'Unauthorized transaction',
+            status: 'submitted' as const
+          }],
+          caseNumber: `DIS-${Date.now().toString().slice(-8)}`,
+          estimatedResolutionDays: 7
+        }
+        
+        scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User is disputing an unauthorized transaction.
+
+DISPUTE DETAILS:
+- Transaction: ${disputedTx.description}
+- Amount: AED ${disputedTx.amount}
+- Date: ${disputedTx.date}
+- Reason: Unauthorized transaction
+
+INSTRUCTION: Confirm the dispute has been initiated and show the dispute confirmation card:
+
+\`\`\`dispute-confirmation
+${JSON.stringify(disputeData, null, 2)}
+\`\`\`
+
+Message tone: Supportive, reassuring, professional. Confirm that the card has been blocked, dispute initiated, and new card will be issued.`
+      }
     }
     
     // Handle travel context scenario - "The Concierge"
@@ -384,7 +526,7 @@ ${JSON.stringify(cards, null, 2)}
 ${JSON.stringify(loans, null, 2)}
 
 4. RECENT TRANSACTIONS (Last 50 shown of ${transactions.length}):
-${JSON.stringify(transactions.slice(0, 50), null, 2)}
+${JSON.stringify(transactions.slice(0, 50).map(({ id, ...tx }) => tx), null, 2)}
 
 5. INVESTMENT PORTFOLIO:
 ${JSON.stringify(holdings, null, 2)}
@@ -408,6 +550,11 @@ GUIDELINES:
 - Be professional but friendly.
 - Format currency as AED (e.g., AED 1,250.00).
 - Do not make up data. If something is missing, say so.
+- CRITICAL: Transaction types are either "credit" (income/deposits) or "debit" (spending/withdrawals).
+  * SPENDING = transactions with type "debit" (e.g., groceries, restaurants, shopping)
+  * INCOME = transactions with type "credit" (e.g., salary, investment returns)
+  * When discussing "spending" or "expenses", ONLY reference debit transactions
+  * Categories like "salary" are INCOME, not spending - never call them spending categories
 
 FORMATTING RULES:
 - Use **bold** for emphasis and headings.
@@ -422,7 +569,7 @@ EXAMPLE CHART:
 {
   "type": "bar",
   "data": [
-    { "name": "Food", "value": 500 },
+    { "name": "Shopping", "value": 500 },
     { "name": "Transport", "value": 300 }
   ]
 }
@@ -431,9 +578,11 @@ EXAMPLE CHART:
 If asked about spending breakdowns or comparisons, ALWAYS include a chart.
 
 RESPONSE STYLE:
-- Start with a one-line health summary referencing the real-time snapshot (balances/spending).
-- Highlight any unusual activity from recentTransactions immediately.
+- Only mention balance/spending summary if directly relevant to the user's question.
+- Do NOT start every response with balance information unless specifically asked.
+- Highlight any unusual activity from recentTransactions when relevant.
 - Offer proactive suggestions when spending spikes or balances drop.
+- If the user asks something outside your scope (e.g., general knowledge, non-financial topics), politely respond: "I'm sorry, I can only assist you with banking and financial matters related to your accounts, transactions, cards, loans, investments, and savings goals. How can I help you with your finances today?"
 `
 
     // Log for debugging
@@ -457,17 +606,48 @@ RESPONSE STYLE:
     ]
 
     // Start chat with history
-    const chat = model.startChat({
+    let chat = model.startChat({
       history: geminiMessages.slice(0, -1), // All but last message
     })
 
     // Get response for last message
     const lastMessage = messages[messages.length - 1]?.content || ""
-    const result = await chat.sendMessageStream(lastMessage)
-
-    // Create streaming response
-    const stream = GoogleGenerativeAIStream(result)
-    return new StreamingTextResponse(stream)
+    
+    // Try primary model first, fallback to secondary on rate limit
+    try {
+      const result = await chat.sendMessageStream(lastMessage)
+      const stream = GoogleGenerativeAIStream(result)
+      return new StreamingTextResponse(stream)
+    } catch (error: any) {
+      const errorMessage = String(error?.message || '').toLowerCase()
+      const errorStatus = error?.status || error?.statusCode || 0
+      const errorCode = String(error?.code || '').toLowerCase()
+      
+      const isRateLimit = errorStatus === 429 || 
+                         errorStatus === 500 ||
+                         errorMessage.includes('rate limit') ||
+                         errorMessage.includes('quota') ||
+                         errorMessage.includes('resource exhausted') ||
+                         errorMessage.includes('per minute') ||
+                         errorMessage.includes('too many requests') ||
+                         errorCode.includes('rate_limit') ||
+                         errorCode.includes('resource_exhausted')
+      
+      // If it's a rate limit, try the fallback model
+      if (isRateLimit) {
+        console.log(`[AI Chat] Rate limit on gemma-3-27b-it, trying fallback: gemma-3-12b-it`)
+        model = genAI.getGenerativeModel({ model: "gemma-3-12b-it" })
+        chat = model.startChat({
+          history: geminiMessages.slice(0, -1),
+        })
+        const result = await chat.sendMessageStream(lastMessage)
+        const stream = GoogleGenerativeAIStream(result)
+        return new StreamingTextResponse(stream)
+      }
+      
+      // If not a rate limit, throw the error
+      throw error
+    }
 
   } catch (error: any) {
     console.error("Error in chat route:", error)

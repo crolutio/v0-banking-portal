@@ -22,8 +22,8 @@
   --primary: oklch(0.801 0.119 125);
   --primary-foreground: oklch(1 0 0);
   
-  /* Secondary - EXACT value from spec */
-  --secondary: oklch(0.90 0.055 125);
+  /* Secondary - Lighter grey as requested */
+  --secondary: oklch(0.96 0.01 247);
   --secondary-foreground: oklch(0.18 0.02 30);
   
   /* Muted - EXACT value from spec */
@@ -57,7 +57,7 @@
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.801 0.119 125);
   --sidebar-primary-foreground: oklch(0.18 0.02 30);
-  --sidebar-accent: oklch(0.90 0.055 125);
+  --sidebar-accent: oklch(0.96 0.01 247);
   --sidebar-accent-foreground: oklch(0.18 0.02 30);
   --sidebar-border: oklch(0.93 0.01 247);
   --sidebar-ring: oklch(0.801 0.119 125);

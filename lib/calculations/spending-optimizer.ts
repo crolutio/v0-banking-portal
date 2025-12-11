@@ -168,40 +168,47 @@ export function findDuplicateSubscriptions(transactions: Transaction[]): Savings
 export function findNegotiableServices(transactions: Transaction[]): SavingsOpportunity[] {
   const opportunities: SavingsOpportunity[] = []
 
-  // Check telecom bills (Du, Etisalat)
-  const duTxs = transactions.filter(tx => 
-    tx.merchant?.toLowerCase().includes('du') ||
-    tx.description.toLowerCase().includes('du telecom')
-  )
-  const etisalatTxs = transactions.filter(tx => 
-    tx.merchant?.toLowerCase().includes('etisalat') ||
-    tx.description.toLowerCase().includes('etisalat')
+  // Check entertainment spending (movies, concerts, events, gaming, etc.)
+  const entertainmentTxs = transactions.filter(tx => 
+    tx.category === 'entertainment' ||
+    tx.merchant?.toLowerCase().includes('cinema') ||
+    tx.merchant?.toLowerCase().includes('movie') ||
+    tx.merchant?.toLowerCase().includes('concert') ||
+    tx.merchant?.toLowerCase().includes('event') ||
+    tx.merchant?.toLowerCase().includes('gaming') ||
+    tx.merchant?.toLowerCase().includes('playstation') ||
+    tx.merchant?.toLowerCase().includes('xbox') ||
+    tx.description.toLowerCase().includes('entertainment') ||
+    tx.description.toLowerCase().includes('cinema') ||
+    tx.description.toLowerCase().includes('movie')
   )
 
-  const telecomTxs = [...duTxs, ...etisalatTxs]
-  if (telecomTxs.length > 0) {
-    const avgMonthlyTelecom = telecomTxs.reduce((sum, tx) => sum + tx.amount, 0) / Math.max(telecomTxs.length, 1)
+  if (entertainmentTxs.length > 5) { // More than 5 entertainment transactions
+    const monthlyEntertainmentSpend = entertainmentTxs.reduce((sum, tx) => sum + tx.amount, 0)
+    const avgEntertainmentValue = monthlyEntertainmentSpend / entertainmentTxs.length
     
-    if (avgMonthlyTelecom > 150) {
-      const potentialSavings = avgMonthlyTelecom * 0.20 // Assume 20% negotiation potential
-      
-      opportunities.push({
-        category: 'Utilities',
-        subcategory: 'Telecom Bills',
-        currentMonthlySpending: avgMonthlyTelecom,
-        targetMonthlySpending: avgMonthlyTelecom - potentialSavings,
-        monthlySavings: potentialSavings,
-        annualSavings: potentialSavings * 12,
-        actions: [
-          'Review your telecom plan for unused features',
-          'Compare competitor offers for better rates',
-          'Negotiate loyalty discount with provider',
-          `Potential savings: ${formatCurrency(potentialSavings, 'AED')}/month`
-        ],
-        icon: '📱',
-        priority: 'high'
-      })
-    }
+    // Suggest reducing by 25% (prioritize experiences, reduce frequency)
+    const targetReduction = 0.25
+    const potentialSavings = monthlyEntertainmentSpend * targetReduction
+    const targetMonthlySpending = monthlyEntertainmentSpend - potentialSavings
+    
+    opportunities.push({
+      category: 'Shopping',
+      subcategory: 'Entertainment',
+      currentMonthlySpending: monthlyEntertainmentSpend,
+      targetMonthlySpending: targetMonthlySpending,
+      monthlySavings: potentialSavings,
+      annualSavings: potentialSavings * 12,
+      actions: [
+        `You spent ${formatCurrency(monthlyEntertainmentSpend, 'AED')} on entertainment this period`,
+        'Reduce entertainment spending by 25%',
+        'Prioritize free or low-cost activities',
+        'Look for discounts and promotions before booking',
+        `Target savings: ${formatCurrency(potentialSavings, 'AED')}/month`
+      ],
+      icon: '🎬',
+      priority: 'medium'
+    })
   }
 
   // Check utilities (DEWA, Empower)
@@ -244,37 +251,38 @@ export function findNegotiableServices(transactions: Transaction[]): SavingsOppo
 export function analyzeSpendingWaste(transactions: Transaction[]): SavingsOpportunity[] {
   const opportunities: SavingsOpportunity[] = []
 
-  // Food delivery waste
-  const deliveryTxs = transactions.filter(tx => 
-    tx.merchant?.toLowerCase().includes('talabat') ||
-    tx.merchant?.toLowerCase().includes('deliveroo') ||
-    tx.merchant?.toLowerCase().includes('uber eats') ||
-    tx.category === 'restaurants'
+  // Restaurant spending opportunity
+  const restaurantTxs = transactions.filter(tx => 
+    tx.category === 'restaurants' && 
+    !tx.merchant?.toLowerCase().includes('talabat') &&
+    !tx.merchant?.toLowerCase().includes('deliveroo') &&
+    !tx.merchant?.toLowerCase().includes('uber eats')
   )
-
-  if (deliveryTxs.length > 15) { // More than 15 delivery orders
-    const monthlyDeliverySpend = deliveryTxs.reduce((sum, tx) => sum + tx.amount, 0)
-    const avgOrderValue = monthlyDeliverySpend / deliveryTxs.length
+  
+  if (restaurantTxs.length > 8) { // More than 8 restaurant visits
+    const monthlyRestaurantSpend = restaurantTxs.reduce((sum, tx) => sum + tx.amount, 0)
+    const avgVisitValue = monthlyRestaurantSpend / restaurantTxs.length
     
-    // Suggest reducing by 30%
-    const targetReduction = 0.30
-    const potentialSavings = monthlyDeliverySpend * targetReduction
+    // Suggest reducing by 20% (cooking at home more often)
+    const targetReduction = 0.20
+    const potentialSavings = monthlyRestaurantSpend * targetReduction
+    const targetMonthlySpending = monthlyRestaurantSpend - potentialSavings
     
     opportunities.push({
-      category: 'Food & Dining',
-      subcategory: 'Frequent Food Delivery',
-      currentMonthlySpending: monthlyDeliverySpend,
-      targetMonthlySpending: monthlyDeliverySpend - potentialSavings,
+      category: 'Shopping',
+      subcategory: 'Restaurant Dining',
+      currentMonthlySpending: monthlyRestaurantSpend,
+      targetMonthlySpending: targetMonthlySpending,
       monthlySavings: potentialSavings,
       annualSavings: potentialSavings * 12,
       actions: [
-        `You ordered delivery ${deliveryTxs.length} times this period`,
-        'Reduce to 10-12 orders per month',
-        'Meal prep on weekends to reduce impulse orders',
+        `You dined out ${restaurantTxs.length} times this period`,
+        'Reduce restaurant visits by 20%',
+        'Cook at home more often to save money',
         `Target savings: ${formatCurrency(potentialSavings, 'AED')}/month`
       ],
-      icon: '🍔',
-      priority: 'high'
+      icon: '🍽️',
+      priority: 'medium'
     })
   }
 
