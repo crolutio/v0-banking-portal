@@ -275,7 +275,7 @@ Show enthusiasm about helping them fund their trip without debt.
 Include this optimization card at the end of your response:
 
 \`\`\`optimization
-${JSON.stringify(optimization, null, 2)}
+${JSON.stringify(optimization)}
 \`\`\`
 
 Message tone: Excited, helpful, empowering. "Great news! You don't need a loan - I found the money!"`
@@ -311,7 +311,7 @@ Highlight the strengths, address any concerns, and outline the next steps.
 Include this loan approval card at the end of your response:
 
 \`\`\`loan-approval
-${JSON.stringify(preApproval, null, 2)}
+${JSON.stringify(preApproval)}
 \`\`\`
 
 Message tone: Professional, transparent, supportive.`
@@ -390,7 +390,7 @@ INSTRUCTION: Present the savings opportunities with actionable advice.
 Include this optimization card:
 
 \`\`\`optimization
-${JSON.stringify(optimization, null, 2)}
+${JSON.stringify(optimization)}
 \`\`\`
 
 Message tone: Analytical, helpful, action-oriented.`
@@ -416,7 +416,7 @@ SUSPICIOUS TRANSACTIONS FOUND: ${suspiciousTransactions.length} transaction(s) f
 INSTRUCTION: Briefly explain what makes these transactions suspicious, then display the suspicious transactions card:
 
 \`\`\`suspicious-transactions
-${JSON.stringify({ transactions: suspiciousTransactions }, null, 2)}
+${JSON.stringify({ transactions: suspiciousTransactions })}
 \`\`\`
 
 Message tone: Helpful, clear, reassuring. Explain the flags without being alarmist.`
@@ -460,7 +460,7 @@ DISPUTE DETAILS:
 INSTRUCTION: Confirm the dispute has been initiated and show the dispute confirmation card:
 
 \`\`\`dispute-confirmation
-${JSON.stringify(disputeData, null, 2)}
+${JSON.stringify(disputeData)}
 \`\`\`
 
 Message tone: Supportive, reassuring, professional. Confirm that the card has been blocked, dispute initiated, and new card will be issued.`
@@ -517,33 +517,33 @@ FINANCIAL DATA OVERVIEW:
 DETAILED DATA:
 
 1. ACCOUNTS:
-${JSON.stringify(accounts, null, 2)}
+${JSON.stringify(accounts.map(a => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, available_balance: a.available_balance, currency: a.currency })))}
 
 2. CARDS:
-${JSON.stringify(cards, null, 2)}
+${JSON.stringify(cards.map(c => ({ id: c.id, type: c.type, last4: c.last4, expiry: c.expiry, status: c.status, limit: c.limit })))}
 
 3. LOANS:
-${JSON.stringify(loans, null, 2)}
+${JSON.stringify(loans.map(l => ({ id: l.id, type: l.type, amount: l.amount, remaining: l.remaining, interest_rate: l.interest_rate, monthly_payment: l.monthly_payment, status: l.status })))}
 
-4. RECENT TRANSACTIONS (Last 50 shown of ${transactions.length}):
-${JSON.stringify(transactions.slice(0, 50).map(({ id, ...tx }) => tx), null, 2)}
+4. RECENT TRANSACTIONS (Last 30 shown of ${transactions.length}):
+${JSON.stringify(transactions.slice(0, 30).map(tx => ({ date: tx.date, description: tx.description, amount: tx.amount, type: tx.type, category: tx.category, is_unusual: tx.is_unusual, unusual_reason: tx.unusual_reason })))}
 
 5. INVESTMENT PORTFOLIO:
-${JSON.stringify(holdings, null, 2)}
+${JSON.stringify(holdings.map(h => ({ symbol: h.symbol, name: h.name, quantity: h.quantity, current_price: h.current_price, total_value: h.total_value })))}
 
 6. SAVINGS GOALS:
-${JSON.stringify(goals, null, 2)}
+${JSON.stringify(goals.map(g => ({ id: g.id, name: g.name, target: g.target, current: g.current, deadline: g.deadline, status: g.status })))}
 
 7. REWARDS:
-- Profile: ${JSON.stringify(rewardProfile, null, 2)}
-- Recent Activity: ${JSON.stringify(rewardActivities.slice(0, 10), null, 2)}
+- Profile: ${JSON.stringify(rewardProfile ? { tier: rewardProfile.tier, points: rewardProfile.points, next_tier: rewardProfile.next_tier } : null)}
+- Recent Activity: ${JSON.stringify(rewardActivities.slice(0, 5).map(a => ({ date: a.date, description: a.description, points: a.points })))}
 
 REAL-TIME SNAPSHOT:
-${JSON.stringify(realTimeSnapshot, null, 2)}
+${JSON.stringify(realTimeSnapshot)}
 
 GUIDELINES:
 - Answer based ONLY on the provided data.
-- IMPORTANT: "RECENT TRANSACTIONS" only shows the last 50 items. Refer to "REAL-TIME SNAPSHOT" -> "dataSummary" for the full date range availability.
+- IMPORTANT: "RECENT TRANSACTIONS" only shows the last 30 items. Refer to "REAL-TIME SNAPSHOT" -> "dataSummary" for the full date range availability.
 - If asked about history older than the provided detailed transactions, state that you only have details for the recent period but can see summary stats.
 - If the user asks about "this month" or "this year", filter the transactions in the data provided.
 - Current Date: ${new Date().toISOString().split('T')[0]}
@@ -599,7 +599,7 @@ RESPONSE STYLE:
         role: 'model',
         parts: [{text: 'I understand. I have access to all the financial data and am ready to assist with any questions about accounts, transactions, investments, loans, cards, savings goals, and rewards. How can I help you today?'}]
       },
-      ...messages.map((msg: any) => ({
+      ...messages.slice(-10).map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       }))

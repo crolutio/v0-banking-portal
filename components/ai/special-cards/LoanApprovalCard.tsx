@@ -33,8 +33,8 @@ export function LoanApprovalCard({ data }: LoanApprovalCardProps) {
   const handleApplyNow = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.stopImmediatePropagation) {
-      e.stopImmediatePropagation()
+    if (e.nativeEvent.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation()
     }
     setTimeout(() => {
       openChatWithMessage(
@@ -46,8 +46,8 @@ export function LoanApprovalCard({ data }: LoanApprovalCardProps) {
   const handleSimulatePayment = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.stopImmediatePropagation) {
-      e.stopImmediatePropagation()
+    if (e.nativeEvent.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation()
     }
     setTimeout(() => {
       openChatWithMessage(

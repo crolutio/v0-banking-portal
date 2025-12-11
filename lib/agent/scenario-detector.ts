@@ -281,6 +281,91 @@ function detectPaymentScheduleRequest(message: string): ScenarioDetection {
 }
 
 /**
+ * Detect if user wants to review suspicious transactions
+ */
+function detectReviewSuspiciousTransactions(message: string): ScenarioDetection {
+  const suspiciousKeywords = [
+    'review.*suspicious',
+    'review.*unusual',
+    'suspicious.*transaction',
+    'unusual.*transaction',
+    'explain.*suspicious',
+    'explain.*unusual',
+    'what.*suspicious',
+    'what.*unusual',
+    'show.*suspicious',
+    'show.*unusual',
+    'list.*suspicious',
+    'list.*unusual',
+    'flagged.*transaction',
+    'suspicious.*activity'
+  ]
+  
+  const hasKeyword = suspiciousKeywords.some(keyword => {
+    const regex = new RegExp(keyword, 'i')
+    return regex.test(message)
+  })
+  
+  if (hasKeyword) {
+    return {
+      type: 'review_suspicious_transactions',
+      confidence: 0.9
+    }
+  }
+  
+  return {
+    type: 'standard',
+    confidence: 0.0
+  }
+}
+
+/**
+ * Detect if user wants to dispute a transaction
+ */
+function detectDisputeRequest(message: string, conversationHistory?: string[]): ScenarioDetection {
+  const disputeKeywords = [
+    "wasn't by me",
+    "didn't make",
+    "unauthorized",
+    "dispute",
+    "fraud",
+    "didn't authorize",
+    "not mine",
+    "chargeback",
+    "cancel transaction",
+    "report fraud"
+  ]
+  
+  const hasDisputeKeyword = disputeKeywords.some(keyword => message.includes(keyword))
+  
+  // Also check conversation history for context
+  const historyContext = conversationHistory?.join(' ').toLowerCase() || ''
+  const hasHistoryContext = conversationHistory && conversationHistory.some(msg => 
+    msg.toLowerCase().includes('suspicious') || 
+    msg.toLowerCase().includes('unusual') ||
+    msg.toLowerCase().includes('transaction')
+  )
+  
+  if (hasDisputeKeyword || (hasHistoryContext && message.toLowerCase().includes('dispute'))) {
+    // Try to extract transaction description from message
+    const transactionDescription = message.match(/(?:for|about|regarding)\s+([^.!?]+)/i)?.[1]?.trim()
+    
+    return {
+      type: 'dispute_transaction',
+      confidence: hasDisputeKeyword ? 0.9 : 0.7,
+      context: {
+        transactionDescription: transactionDescription || undefined
+      }
+    }
+  }
+  
+  return {
+    type: 'standard',
+    confidence: 0.0
+  }
+}
+
+/**
  * Helper: Extract loan term from message
  */
 function extractLoanTerm(message: string): number | undefined {

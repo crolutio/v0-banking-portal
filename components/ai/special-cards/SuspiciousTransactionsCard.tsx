@@ -78,8 +78,8 @@ export function SuspiciousTransactionsCard({ data }: SuspiciousTransactionsCardP
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  if (e.stopImmediatePropagation) {
-                    e.stopImmediatePropagation()
+                  if (e.nativeEvent.stopImmediatePropagation) {
+                    e.nativeEvent.stopImmediatePropagation()
                   }
                   handleDispute(tx)
                 }}

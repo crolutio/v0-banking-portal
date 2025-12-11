@@ -19,8 +19,8 @@ export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
   const handleStartOptimizing = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.stopImmediatePropagation) {
-      e.stopImmediatePropagation()
+    if (e.nativeEvent.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation()
     }
     const topOpportunity = opportunities[0]
     if (topOpportunity) {
@@ -36,8 +36,8 @@ export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
   const handleScheduleReview = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.stopImmediatePropagation) {
-      e.stopImmediatePropagation()
+    if (e.nativeEvent.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation()
     }
     // Use setTimeout to ensure the event has fully propagated
     setTimeout(() => {
@@ -205,8 +205,8 @@ export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              if (e.stopImmediatePropagation) {
-                e.stopImmediatePropagation()
+              if (e.nativeEvent.stopImmediatePropagation) {
+                e.nativeEvent.stopImmediatePropagation()
               }
               handleStartOptimizing(e)
             }}
@@ -221,8 +221,8 @@ export function OptimizationResultCard({ data }: OptimizationResultCardProps) {
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              if (e.stopImmediatePropagation) {
-                e.stopImmediatePropagation()
+              if (e.nativeEvent.stopImmediatePropagation) {
+                e.nativeEvent.stopImmediatePropagation()
               }
               handleScheduleReview(e)
             }}
