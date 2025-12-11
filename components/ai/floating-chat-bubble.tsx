@@ -366,7 +366,7 @@ const MessageContent = ({ content, isFullscreen = false }: { content: string; is
   allTableMatches.sort((a, b) => a.index - b.index)
   
   // Split by code blocks first, then check for tables in remaining text
-  const codeBlockRegex = /```(?:chart|loan-approval|optimization|dispute-confirmation|table)[\s\S]*?```/g
+  const codeBlockRegex = /```(?:chart|loan-approval|optimization|dispute-confirmation|suspicious-transactions|table)[\s\S]*?```/g
   const codeBlocks: Array<{ type: 'code' | 'text', content: string, index: number }> = []
   let lastIndex = 0
   let match

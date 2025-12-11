@@ -33,11 +33,11 @@ export function SuspiciousTransactionsCard({ data }: SuspiciousTransactionsCardP
   }
 
   return (
-    <Card className="border-amber-500/30 bg-amber-500/5 shadow-lg">
+    <Card className="border-red-500/30 bg-red-500/5 shadow-lg">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-amber-500" />
-          <CardTitle className="text-lg">Suspicious Transactions</CardTitle>
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <CardTitle className="text-lg text-red-600 dark:text-red-400">Suspicious Transactions</CardTitle>
         </div>
         <CardDescription>
           Review the transactions below that have been flagged as potentially suspicious
@@ -47,11 +47,11 @@ export function SuspiciousTransactionsCard({ data }: SuspiciousTransactionsCardP
         {data.transactions.map((tx) => (
           <div
             key={tx.id}
-            className="flex items-start justify-between gap-4 p-3 rounded-lg border border-amber-500/20 bg-card hover:bg-muted/50 transition-colors"
+            className="flex items-start justify-between gap-4 p-3 rounded-lg border border-red-500/20 bg-card hover:bg-muted/50 transition-colors"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
                 <p className="font-medium text-sm truncate">{tx.description}</p>
               </div>
               <p className="text-xs text-muted-foreground mb-1">

@@ -415,7 +415,10 @@ export function CustomerDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-muted/30">
+            <div 
+              className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => openChatWithMessage("Tell me about my top spending category and how I can optimize it")}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
                 <span className="text-sm font-medium">Top Category</span>
@@ -423,7 +426,10 @@ export function CustomerDashboard() {
               <p className="text-2xl font-bold">Shopping</p>
               <p className="text-xs text-muted-foreground">32% of total spending</p>
             </div>
-            <div className="p-4 rounded-lg bg-muted/30">
+            <div 
+              className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => openChatWithMessage("What are my savings opportunities and how can I save more money?")}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="h-4 w-4 text-blue-500" />
                 <span className="text-sm font-medium">Savings Potential</span>
@@ -431,7 +437,10 @@ export function CustomerDashboard() {
               <p className="text-2xl font-bold">{formatCurrency(1250)}</p>
               <p className="text-xs text-muted-foreground">Based on subscription analysis</p>
             </div>
-            <div className="p-4 rounded-lg bg-muted/30">
+            <div 
+              className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => openChatWithMessage("Tell me about my upcoming bills and loan payments")}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm font-medium">Next Bill</span>

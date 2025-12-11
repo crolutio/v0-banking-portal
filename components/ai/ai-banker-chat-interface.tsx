@@ -33,7 +33,7 @@ import { CitationBadge } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
-import { LoanApprovalCard, OptimizationResultCard } from "@/components/ai/special-cards"
+import { LoanApprovalCard, OptimizationResultCard, SuspiciousTransactionsCard } from "@/components/ai/special-cards"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import {
   Send,
@@ -254,8 +254,8 @@ const FormattedText = ({ text }: { text: string }) => {
 };
 
 const MessageContent = ({ content }: { content: string }) => {
-  // Split content by all special code blocks (chart, loan-approval, optimization)
-  const parts = content.split(/(```(?:chart|loan-approval|optimization)[\s\S]*?```)/g);
+  // Split content by all special code blocks (chart, loan-approval, optimization, suspicious-transactions)
+  const parts = content.split(/(```(?:chart|loan-approval|optimization|suspicious-transactions)[\s\S]*?```)/g);
 
   return (
     <div className="text-sm space-y-2">
@@ -289,6 +289,17 @@ const MessageContent = ({ content }: { content: string }) => {
             const jsonStr = part.replace(/^```optimization\s*/, "").replace(/```$/, "");
             const optimizationData = JSON.parse(jsonStr);
             return <OptimizationResultCard key={i} data={optimizationData} />;
+          } catch (e) {
+            return null;
+          }
+        }
+        
+        // Handle suspicious-transactions blocks
+        if (part.startsWith("```suspicious-transactions")) {
+          try {
+            const jsonStr = part.replace(/^```suspicious-transactions\s*/, "").replace(/```$/, "");
+            const suspiciousData = JSON.parse(jsonStr);
+            return <SuspiciousTransactionsCard key={i} data={suspiciousData} />;
           } catch (e) {
             return null;
           }

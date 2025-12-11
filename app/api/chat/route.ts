@@ -407,19 +407,32 @@ Message tone: Analytical, helpful, action-oriented.`
         category: tx.category || undefined
       }))
       
-      scenarioEnhancement = `
+      if (suspiciousTransactions.length === 0) {
+        scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User wants to review suspicious transactions.
+
+NO SUSPICIOUS TRANSACTIONS FOUND: All transactions appear normal.
+
+INSTRUCTION: Inform the user that no suspicious transactions were detected and their account activity looks normal. Be reassuring and positive.`
+      } else {
+        scenarioEnhancement = `
 
 SPECIAL SCENARIO DETECTED: User wants to review suspicious transactions.
 
 SUSPICIOUS TRANSACTIONS FOUND: ${suspiciousTransactions.length} transaction(s) flagged.
 
-INSTRUCTION: Briefly explain what makes these transactions suspicious, then display the suspicious transactions card:
+CRITICAL INSTRUCTIONS:
+Your response must ONLY contain the code block below. DO NOT add any text before or after it. The code block will automatically render as a red card.
+
+Your ENTIRE response should be ONLY this:
 
 \`\`\`suspicious-transactions
 ${JSON.stringify({ transactions: suspiciousTransactions })}
 \`\`\`
 
-Message tone: Helpful, clear, reassuring. Explain the flags without being alarmist.`
+DO NOT write any explanation text. DO NOT write any introductory text. DO NOT write any follow-up text. ONLY output the code block above.`
+      }
     }
     
     // Handle dispute transaction scenario

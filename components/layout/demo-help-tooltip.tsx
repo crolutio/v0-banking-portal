@@ -31,10 +31,6 @@ const demoTips: Record<string, DemoTip> = {
         description: "View categorized spending analysis"
       },
       { 
-        prompt: "What unusual transactions do I have?",
-        description: "AI-detected anomalies"
-      },
-      { 
         prompt: "Forecast my expenses for next month",
         description: "Predictive analytics"
       }

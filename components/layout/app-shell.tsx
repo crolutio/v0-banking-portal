@@ -42,6 +42,8 @@ import {
   Moon,
   Monitor,
   X,
+  Plus,
+  Minus,
 } from "lucide-react"
 import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
 
@@ -201,26 +203,28 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
     return false
   })
 
-  const { theme } = useTheme()
+  const { theme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Determine which logo to show - use resolvedTheme to handle system theme
+  const isDark = mounted ? (resolvedTheme === "dark") : false
+  const logoSrc = isDark ? "/aideology-logo.png" : "/aideology-logo-light.png"
+
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
       <div className="flex items-center justify-between px-4 min-h-[120px] border-b border-sidebar-border">
         <div className="flex items-center gap-3 py-8">
-          {mounted && (
-            <Image 
-              src={theme === "dark" ? "/aideology-logo.png" : "/aideology-logo-light.png"} 
-              alt="Aideology" 
-              width={192} 
-              height={192}
-              className="object-contain"
-            />
-          )}
+          <Image 
+            src={logoSrc}
+            alt="Aideology" 
+            width={192} 
+            height={192}
+            className="object-contain"
+          />
         </div>
         {onClose && (
           <Button
@@ -283,15 +287,9 @@ function Topbar() {
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
-          <div className="hidden lg:flex items-center gap-6 flex-1">
-            <span className="text-2xl font-semibold text-foreground">Bank of the Future</span>
-            <div className="flex flex-col mx-auto">
-              <span className="text-sm font-medium text-foreground text-center">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </span>
-              <span className="text-xs text-muted-foreground text-center">
-                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+          <div className="hidden lg:flex items-center gap-4 flex-1">
+            <div className="flex-1 flex justify-center">
+              <DemoHelpTooltip />
             </div>
           </div>
         </div>
@@ -314,21 +312,43 @@ function Topbar() {
           </SheetContent>
         </Sheet>
 
-        <div className="hidden lg:flex items-center gap-6 flex-1">
-          <span className="text-2xl font-semibold text-foreground">Bank of the Future</span>
-          <div className="flex flex-col mx-auto">
-            <span className="text-sm font-medium text-foreground text-center">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </span>
-            <span className="text-xs text-muted-foreground text-center">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-            </span>
+        <div className="hidden lg:flex items-center gap-4 flex-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              const currentZoom = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+              const newZoom = Math.max(12, currentZoom - 2)
+              document.documentElement.style.fontSize = `${newZoom}px`
+            }}
+            title="Zoom out"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              const currentZoom = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+              const newZoom = Math.min(24, currentZoom + 2)
+              document.documentElement.style.fontSize = `${newZoom}px`
+            }}
+            title="Zoom in"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <div className="flex-1 flex justify-center">
+            <DemoHelpTooltip />
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <DemoHelpTooltip />
+        <div className="lg:hidden">
+          <DemoHelpTooltip />
+        </div>
         <ThemeToggle />
         <RoleSwitcher />
       </div>

@@ -187,16 +187,6 @@ export default function RewardsPage() {
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "travel": return <Plane className="h-4 w-4" />
-      case "gadget": return <ShoppingBag className="h-4 w-4" />
-      case "charity": return <Heart className="h-4 w-4" />
-      case "gift_card": return <Gift className="h-4 w-4" />
-      default: return <Award className="h-4 w-4" />
-    }
-  }
-
   const aiQuestions = [
     "How do I earn more points?",
     "What rewards can I afford?",
@@ -381,12 +371,6 @@ export default function RewardsPage() {
             </SheetHeader>
             {selectedReward && (
                 <div className="mt-6 space-y-6">
-                    <div className="aspect-video relative rounded-lg overflow-hidden bg-muted">
-                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                            {/* Placeholder for image */}
-                            <Gift className="h-12 w-12" />
-                        </div>
-                    </div>
                     <div>
                         <h3 className="text-xl font-bold">{selectedReward.name}</h3>
                         <p className="text-muted-foreground mt-2">{selectedReward.description}</p>
@@ -439,21 +423,30 @@ export default function RewardsPage() {
   )
 }
 
+function getCategoryIcon(category: string) {
+  switch (category) {
+    case "travel": return <Plane className="h-4 w-4" />
+    case "gadget": return <ShoppingBag className="h-4 w-4" />
+    case "charity": return <Heart className="h-4 w-4" />
+    case "gift_card": return <Gift className="h-4 w-4" />
+    default: return <Award className="h-4 w-4" />
+  }
+}
+
 function RewardItemCard({ item, canAfford, onRedeem }: { item: RewardItem, canAfford: boolean, onRedeem: () => void }) {
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-md transition-all">
-      <div className="h-32 bg-muted relative">
-         {/* Placeholder Image */}
-         <div className="absolute inset-0 flex items-center justify-center bg-muted">
-            <Gift className="h-8 w-8 text-muted-foreground/50" />
-         </div>
-         {item.isFeatured && (
-             <Badge className="absolute top-2 right-2 bg-amber-500">Featured</Badge>
-         )}
-      </div>
+      {item.isFeatured && (
+        <div className="relative">
+          <Badge className="absolute top-2 right-2 z-10 bg-amber-500">Featured</Badge>
+        </div>
+      )}
       <CardContent className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
-            <h4 className="font-semibold line-clamp-1" title={item.name}>{item.name}</h4>
+            <div className="flex items-center gap-2 mb-2">
+              {getCategoryIcon(item.category)}
+              <h4 className="font-semibold line-clamp-1" title={item.name}>{item.name}</h4>
+            </div>
             <p className="text-sm text-muted-foreground line-clamp-2 mt-1 h-10">{item.description}</p>
         </div>
         <div className="mt-4 flex items-center justify-between">
