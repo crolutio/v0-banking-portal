@@ -30,6 +30,7 @@ import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTheme } from "next-themes"
 import { Card } from "@/components/ui/card"
+import { VapiVoiceButton } from "@/components/ai/vapi-voice-button"
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
@@ -860,13 +861,19 @@ export function FloatingChatBubble() {
             e.preventDefault()
             handleSubmit(e)
           }}
-          className="flex gap-3"
+          className="flex gap-3 items-center"
         >
           <Input
             placeholder="Type your message..."
             value={input || ""}
             onChange={handleInputChange}
             className="flex-1"
+          />
+          <VapiVoiceButton
+            onFinalTranscript={async (text) => {
+              if (!text.trim()) return
+              await append({ role: "user", content: text.trim() })
+            }}
           />
           <Button 
             type={isLoading ? "button" : "submit"}
