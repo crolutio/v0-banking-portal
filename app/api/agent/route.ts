@@ -32,18 +32,43 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     
+    // Log the full request for debugging
+    console.log("[agent] Full request body:", JSON.stringify(body, null, 2))
+    
     // Handle Vapi tool call format OR direct API call format
     // Vapi sends: { message: { content: "..." }, userId: "...", ... }
     // Direct API sends: { question: "...", userId: "...", ... }
     const question = body.message?.content || 
                      body.transcript || 
                      body.userMessage || 
-                     body.question
+                     body.question ||
+                     body.query ||
+                     body.input
     
-    const requestedUserId = body.userId || 
-                            body.user?.id || 
-                            body.variables?.userId ||
-                            body.requestedUserId
+    // Handle userId - Vapi might send "me" or other placeholders
+    let requestedUserId = body.userId || 
+                         body.user?.id || 
+                         body.variables?.userId ||
+                         body.requestedUserId
+    
+    // Map Vapi placeholders to actual user ID
+    if (requestedUserId === "me" || requestedUserId === "user" || !requestedUserId) {
+      requestedUserId = "11111111-1111-1111-1111-111111111111"
+    }
+    
+    // Also check tool call args for userId
+    if (body.message?.toolCalls?.[0]?.function?.arguments) {
+      try {
+        const args = typeof body.message.toolCalls[0].function.arguments === 'string' 
+          ? JSON.parse(body.message.toolCalls[0].function.arguments)
+          : body.message.toolCalls[0].function.arguments
+        if (args.userId && args.userId !== "me" && args.userId !== "user") {
+          requestedUserId = args.userId
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
     
     const agentId = body.agentId || "banker"
     const currentPage = body.currentPage || "/home"
@@ -261,8 +286,25 @@ TASK:
 
     const answer = answerResult.response.text()
 
+    // Detect if this is a Vapi request
+    // Vapi API Request tool sends: { question, userId, ... } or { message: { toolCalls: [...] } }
+    const isVapiRequest = !!(
+      body.message?.toolCalls || 
+      toolCall || 
+      body.toolCallId ||
+      body.function?.name || // Custom tool format
+      (body.question && !body.agentId) // Has question but no agentId (likely Vapi)
+    )
+    
+    console.log("[agent] Response format check:", {
+      isVapiRequest,
+      hasToolCall: !!toolCall,
+      toolCallId: toolCall?.id || body.toolCallId,
+      bodyKeys: Object.keys(body)
+    })
+    
     // Handle Vapi tool call response format (if request came from Vapi)
-    if (toolCall) {
+    if (isVapiRequest && toolCall?.id) {
       // Vapi expects this format for tool calls
       return NextResponse.json({
         results: [
@@ -272,9 +314,25 @@ TASK:
           }
         ]
       })
+    } else if (isVapiRequest && body.toolCallId) {
+      // Alternative Vapi format
+      return NextResponse.json({
+        results: [
+          {
+            toolCallId: body.toolCallId,
+            result: answer
+          }
+        ]
+      })
+    } else if (isVapiRequest) {
+      // Vapi request but no toolCallId - return just the result
+      // This handles API Request tool format
+      return NextResponse.json({
+        result: answer
+      })
     }
 
-    // Standard API response format
+    // Standard API response format (for Next.js chat interface)
     return NextResponse.json({ answer, toolCalls, toolResults: results })
   } catch (error: any) {
     console.error("[agent] Error:", error)
