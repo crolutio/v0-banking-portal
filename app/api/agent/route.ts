@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       // Add timeout for voice mode to prevent long waits
       const timeoutMs = isVoice ? 12000 : 30000 // 12s for voice, 30s for text
       
-      answer = await Promise.race([
+      const agentResult = await Promise.race([
         runLangGraphAgent({
           question,
           userId,
@@ -92,10 +92,12 @@ export async function POST(req: Request) {
           agentId,
           currentPage,
         }),
-        new Promise<string>((_, reject) => 
+        new Promise<{ answer: string; shortAnswer?: string }>((_, reject) => 
           setTimeout(() => reject(new Error("Agent timeout")), timeoutMs)
         )
       ])
+      
+      answer = agentResult.answer
       
       console.log(`[agent] Agent completed successfully, answer length: ${answer?.length || 0}`)
     } catch (error: any) {
