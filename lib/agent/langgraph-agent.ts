@@ -35,6 +35,7 @@ interface AgentState extends Record<string, any> {
   agentId: string
   currentPage: string
   isVoice: boolean
+  isHybrid?: boolean // New: hybrid mode (long chat + short voice)
   toolResults: Record<string, any>
   allData?: {
     accounts: any[]
@@ -48,6 +49,7 @@ interface AgentState extends Record<string, any> {
     supportTickets: any[]
   }
   answer?: string
+  shortAnswer?: string // New: short summary for voice
   iteration: number
 }
 
@@ -198,8 +200,20 @@ async function prefetchNode(state: AgentState): Promise<Partial<AgentState>> {
     // For voice, use a timeout to fail fast if it takes too long
     const timeoutMs = state.isVoice ? 3000 : 10000
     
-    const allData = await Promise.race([
-      (async () => {
+    type AllData = {
+      accounts: any[]
+      cards: any[]
+      loans: any[]
+      transactions: any[]
+      holdings: any[]
+      goals: any[]
+      rewardProfile: any
+      rewardActivities: any[]
+      supportTickets: any[]
+    }
+    
+    const allData: AllData = await Promise.race([
+      (async (): Promise<AllData> => {
         const accounts = await fetchData("accounts", state.userId)
         const accountIds = accounts.map((a: any) => a.id)
         
@@ -250,7 +264,7 @@ async function prefetchNode(state: AgentState): Promise<Partial<AgentState>> {
           supportTickets,
         }
       })(),
-      new Promise<typeof allData>((_, reject) => 
+      new Promise<AllData>((_, reject) => 
         setTimeout(() => reject(new Error("Prefetch timeout")), timeoutMs)
       )
     ])
@@ -436,6 +450,78 @@ ${JSON.stringify(state.allData.supportTickets.map((t: any) => ({ id: t.id, subje
     dataContext = `No financial data is currently available. Please try again in a moment.`
   }
 
+  // Hybrid mode: Generate both long (chat) and short (voice) answers
+  if (state.isHybrid) {
+    const longPrompt = `
+You are the "Bank of the Future" AI banking assistant. Provide helpful, detailed answers about the user's banking data. Format currency as AED (e.g., AED 1,250.00).
+
+User ID: ${state.userId}
+Agent persona: ${state.agentId}
+Current page: ${state.currentPage}
+
+The user asked: "${state.question}"
+
+${dataContext}
+
+GUIDELINES:
+- Answer based ONLY on the provided data.
+- Provide helpful, detailed answers with context and explanations.
+- Format currency as AED (e.g., AED 1,250.00).
+- If asked about something not in the data, say you don't have that information.
+- Transaction types: "credit" = income/deposits, "debit" = spending/withdrawals.
+- Current Date: ${new Date().toISOString().split('T')[0]}
+- Be professional but friendly.
+- You can use markdown formatting, bullet points, and code blocks for better readability.
+`
+
+    const shortPrompt = `
+You are the "Bank of the Future" AI banking assistant speaking to a user via voice. Provide a SHORT summary (1-2 sentences maximum) for voice interaction. Keep it brief and conversational. Format currency as "AED X,XXX" (no decimals).
+
+User ID: ${state.userId}
+Agent persona: ${state.agentId}
+Current page: ${state.currentPage}
+
+The user asked: "${state.question}"
+
+${dataContext}
+
+GUIDELINES:
+- Provide a SHORT, concise summary (1-2 sentences maximum) for voice interaction.
+- Format currency as "AED X,XXX" (no decimals).
+- Be conversational and friendly.
+- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
+`
+
+    try {
+      // Generate both answers in parallel
+      const [longResult, shortResult] = await Promise.all([
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: longPrompt }] }],
+        }),
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: shortPrompt }] }],
+        }),
+      ])
+      
+      const longAnswer = typeof longResult.response.text === 'function'
+        ? longResult.response.text()
+        : longResult.response.text || "I couldn't generate a response."
+      
+      const shortAnswer = typeof shortResult.response.text === 'function'
+        ? shortResult.response.text()
+        : shortResult.response.text || "I couldn't generate a response."
+      
+      return { answer: longAnswer, shortAnswer }
+    } catch (error) {
+      console.error("[LangGraph] Hybrid answer generation failed:", error)
+      return { 
+        answer: "I'm sorry, I couldn't generate a response at this time. Please try again.",
+        shortAnswer: "I couldn't generate a response."
+      }
+    }
+  }
+
+  // Regular mode: Single answer
   const systemPrompt = state.isVoice
     ? `You are the "Bank of the Future" AI banking assistant speaking to a user via voice. Provide SHORT answers (1-3 sentences maximum) for voice interaction. Keep it brief to avoid long pauses. Format currency as "AED X,XXX" (no decimals).`
     : `You are the "Bank of the Future" AI banking assistant. Provide helpful, detailed answers about the user's banking data. Format currency as AED (e.g., AED 1,250.00).`
@@ -506,6 +592,7 @@ export async function runLangGraphAgent({
   userId,
   apiKey,
   isVoice = false,
+  isHybrid = false,
   agentId = "banker",
   currentPage = "/home",
 }: {
@@ -513,9 +600,10 @@ export async function runLangGraphAgent({
   userId: string
   apiKey: string
   isVoice?: boolean
+  isHybrid?: boolean
   agentId?: string
   currentPage?: string
-}): Promise<string> {
+}): Promise<{ answer: string; shortAnswer?: string }> {
   if (!apiKey) {
     throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY")
   }
@@ -525,15 +613,16 @@ export async function runLangGraphAgent({
 
   const graph = createAgentGraph()
 
-  const initialState: AgentState = {
-    question,
-    userId,
-    agentId,
-    currentPage,
-    isVoice,
-    toolResults: {},
-    iteration: 0,
-  }
+      const initialState: AgentState = {
+        question,
+        userId,
+        agentId,
+        currentPage,
+        isVoice,
+        isHybrid,
+        toolResults: {},
+        iteration: 0,
+      }
 
   try {
     console.log(`[langgraph-agent] Invoking graph with state:`, {
@@ -542,12 +631,13 @@ export async function runLangGraphAgent({
       isVoice: initialState.isVoice,
     })
     
-    const result = await graph.invoke(initialState as any) as AgentState
-    
-    const answer = result?.answer || "I couldn't generate a response."
-    console.log(`[langgraph-agent] Graph completed, answer length: ${typeof answer === 'string' ? answer.length : 0}`)
-    
-    return answer
+        const result = await graph.invoke(initialState as any) as AgentState
+        
+        const answer = result?.answer || "I couldn't generate a response."
+        const shortAnswer = result?.shortAnswer
+        console.log(`[langgraph-agent] Graph completed, answer length: ${typeof answer === 'string' ? answer.length : 0}, shortAnswer: ${shortAnswer ? 'yes' : 'no'}`)
+        
+        return { answer, shortAnswer }
   } catch (error: any) {
     console.error("[langgraph-agent] Graph execution error:", error)
     console.error("[langgraph-agent] Error message:", error?.message)

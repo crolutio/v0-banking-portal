@@ -9,9 +9,17 @@ type VapiClient = InstanceType<typeof VapiBase>
 
 interface VapiVoiceButtonProps {
   onFinalTranscript: (text: string) => void
+  onUserTranscript?: (text: string) => void
+  onAgentTranscript?: (text: string) => void
+  onCallEnd?: () => void
 }
 
-export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
+export function VapiVoiceButton({ 
+  onFinalTranscript, 
+  onUserTranscript,
+  onAgentTranscript,
+  onCallEnd 
+}: VapiVoiceButtonProps) {
   const apiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY
   const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID
 
@@ -48,6 +56,7 @@ export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
       setIsStarting(false)
       setIsSpeaking(false)
       setCurrentUtterance("")
+      onCallEnd?.()
     })
 
     client.on("speech-start", () => {
@@ -68,21 +77,31 @@ export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
       if (message?.type !== "transcript" || typeof message.transcript !== "string") return
 
       const text = message.transcript as string
+      const role = (message as any).role || (message as any).speaker || "user" // user or assistant
       const isFinal =
         (message as any).final ??
         (message as any).isFinal ??
         (message as any).is_final ??
         false
 
-      // Accumulate partials in buffer
-      setCurrentUtterance((prev) => {
-        const next = text
-        if (isFinal && next.trim()) {
-          onFinalTranscript(next.trim())
-          return ""
-        }
-        return next
-      })
+      // Send live transcript updates
+      if (role === "user" || role === "userMessage") {
+        onUserTranscript?.(text)
+      } else if (role === "assistant" || role === "assistantMessage" || role === "system") {
+        onAgentTranscript?.(text)
+      }
+
+      // Accumulate partials in buffer for final user messages
+      if (role === "user" || role === "userMessage") {
+        setCurrentUtterance((prev) => {
+          const next = text
+          if (isFinal && next.trim()) {
+            onFinalTranscript(next.trim())
+            return ""
+          }
+          return next
+        })
+      }
     })
 
     client.on("error", (error: unknown) => {

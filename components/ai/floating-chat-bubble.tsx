@@ -30,7 +30,10 @@ import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTheme } from "next-themes"
 import { Card } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { VapiVoiceButton } from "@/components/ai/vapi-voice-button"
+import VapiBase from "@vapi-ai/web"
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
@@ -541,6 +544,8 @@ const suggestedPrompts = [
   "Can I afford a 3,000 AED monthly payment?",
 ]
 
+type VapiClient = InstanceType<typeof VapiBase>
+
 export function FloatingChatBubble() {
   const pathname = usePathname()
   const { currentUser } = useRole()
@@ -550,6 +555,12 @@ export function FloatingChatBubble() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastSentMessageRef = useRef<string>("")
   const previousStateRef = useRef<string>(chatState)
+  
+  // Voice Assist state
+  const [voiceAssistEnabled, setVoiceAssistEnabled] = useState(false)
+  const [userLiveTranscript, setUserLiveTranscript] = useState<string>("")
+  const [agentLiveTranscript, setAgentLiveTranscript] = useState<string>("")
+  const [vapiClient, setVapiClient] = useState<VapiClient | null>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, stop } = useChat({
     api: "/api/chat",
@@ -558,8 +569,54 @@ export function FloatingChatBubble() {
       userId: currentUser?.id,
       agentId,
       currentPage: pathname, // Send current page context
+      voiceAssist: voiceAssistEnabled, // Send voice assist flag
+    },
+    onFinish: async (message) => {
+      // If voice assist is enabled, extract and speak the short summary
+      if (voiceAssistEnabled && vapiClient && message.content) {
+        try {
+          // Extract short answer from the message content (it's appended with a marker)
+          const voiceSummaryMatch = message.content.match(/<!--VOICE_SUMMARY:(.+?)-->/s)
+          const shortAnswer = voiceSummaryMatch 
+            ? voiceSummaryMatch[1].trim() 
+            : message.content.substring(0, 150) + "..." // Fallback: first 150 chars
+          
+          // Remove the voice summary marker from the displayed message
+          if (voiceSummaryMatch) {
+            message.content = message.content.replace(/<!--VOICE_SUMMARY:.+?-->/s, "").trim()
+          }
+          
+          // Use browser TTS to speak the short answer
+          if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(shortAnswer)
+            utterance.rate = 1.0
+            utterance.pitch = 1.0
+            utterance.volume = 1.0
+            speechSynthesis.speak(utterance)
+            console.log("[Voice Assist] Speaking via browser TTS:", shortAnswer.substring(0, 50) + "...")
+          } else {
+            console.warn("[Voice Assist] Browser TTS not available")
+          }
+        } catch (error) {
+          console.error("[Voice Assist] Error speaking:", error)
+        }
+      }
     },
   })
+
+  // Initialize Vapi client for voice assist TTS
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY
+    if (voiceAssistEnabled && apiKey) {
+      const client = new VapiBase(apiKey)
+      setVapiClient(client)
+      return () => {
+        client.stop()
+      }
+    } else {
+      setVapiClient(null)
+    }
+  }, [voiceAssistEnabled])
 
   // Auto-send initial message if provided and it's different from the last one
   useEffect(() => {
@@ -814,28 +871,57 @@ export function FloatingChatBubble() {
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}
-              >
-                <div className={cn("max-w-[85%] space-y-1", message.role === "user" ? "items-end" : "items-start")}>
-                  <span className={cn("text-xs font-medium text-muted-foreground px-1", message.role === "user" ? "text-right" : "text-left")}>
-                    {message.role === "user" ? "You" : "AI Banker"}
-                  </span>
-                  <div
-                    className={cn(
-                      "rounded-2xl px-4 break-words overflow-hidden",
-                      message.role === "user" ? "bg-primary text-white" : "bg-muted/30",
-                      isFullscreen ? "py-4" : "py-2"
-                    )}
-                    style={{ maxWidth: '100%', wordWrap: 'break-word' }}
-                  >
-                    <MessageContent content={message.content} isFullscreen={chatState === "fullscreen"} />
+            <>
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}
+                >
+                  <div className={cn("max-w-[85%] space-y-1", message.role === "user" ? "items-end" : "items-start")}>
+                    <span className={cn("text-xs font-medium text-muted-foreground px-1", message.role === "user" ? "text-right" : "text-left")}>
+                      {message.role === "user" ? "You" : "AI Banker"}
+                    </span>
+                    <div
+                      className={cn(
+                        "rounded-2xl px-4 break-words overflow-hidden",
+                        message.role === "user" ? "bg-primary text-white" : "bg-muted/30",
+                        isFullscreen ? "py-4" : "py-2"
+                      )}
+                      style={{ maxWidth: '100%', wordWrap: 'break-word' }}
+                    >
+                      <MessageContent content={message.content} isFullscreen={chatState === "fullscreen"} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+              
+              {/* Live transcripts during voice interaction */}
+              {userLiveTranscript && (
+                <div className="flex gap-3 justify-end">
+                  <div className="max-w-[85%] space-y-1 items-end">
+                    <span className="text-xs font-medium text-muted-foreground px-1 text-right">
+                      You (speaking...)
+                    </span>
+                    <div className="rounded-2xl px-4 py-2 bg-primary/50 text-white italic">
+                      {userLiveTranscript}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {agentLiveTranscript && (
+                <div className="flex gap-3 justify-start">
+                  <div className="max-w-[85%] space-y-1 items-start">
+                    <span className="text-xs font-medium text-muted-foreground px-1 text-left">
+                      AI Banker (speaking...)
+                    </span>
+                    <div className="rounded-2xl px-4 py-2 bg-muted/20 italic">
+                      {agentLiveTranscript}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {isLoading && (
@@ -855,10 +941,30 @@ export function FloatingChatBubble() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-background">
+      <div className="p-4 border-t bg-background space-y-3">
+        {/* Voice Assist Toggle */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="voice-assist"
+              checked={voiceAssistEnabled}
+              onCheckedChange={setVoiceAssistEnabled}
+            />
+            <Label htmlFor="voice-assist" className="text-sm font-medium cursor-pointer">
+              Voice Assist
+            </Label>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {voiceAssistEnabled ? "Hybrid mode: Chat + Voice summary" : "Text chat only"}
+          </span>
+        </div>
+        
         <form
           onSubmit={(e) => {
             e.preventDefault()
+            // Clear live transcripts when submitting
+            setUserLiveTranscript("")
+            setAgentLiveTranscript("")
             handleSubmit(e)
           }}
           className="flex gap-3 items-center"
@@ -872,7 +978,18 @@ export function FloatingChatBubble() {
           <VapiVoiceButton
             onFinalTranscript={async (text) => {
               if (!text.trim()) return
+              setUserLiveTranscript("")
               await append({ role: "user", content: text.trim() })
+            }}
+            onUserTranscript={(text) => {
+              setUserLiveTranscript(text)
+            }}
+            onAgentTranscript={(text) => {
+              setAgentLiveTranscript(text)
+            }}
+            onCallEnd={() => {
+              setUserLiveTranscript("")
+              setAgentLiveTranscript("")
             }}
           />
           <Button 

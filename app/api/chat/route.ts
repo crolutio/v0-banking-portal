@@ -7,6 +7,7 @@ import { generateSavingsSuggestions } from "@/lib/savings/suggestions"
 import { detectScenario } from "@/lib/agent/scenario-detector"
 import { analyzeLoanPreApproval } from "@/lib/calculations/loan-preapproval"
 import { analyzeSpendingOptimization } from "@/lib/calculations/spending-optimizer"
+import { runLangGraphAgent } from "@/lib/agent/langgraph-agent"
 
 // Set the runtime to nodejs for better compatibility
 export const runtime = "nodejs"
@@ -52,8 +53,9 @@ async function fetchData(table: string, userId: string, column = "user_id") {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId: requestedUserId, agentId, currentPage } = await req.json()
+    const { messages, userId: requestedUserId, agentId, currentPage, voiceAssist } = await req.json()
     const persona = getAgentPersona(agentId)
+    const isHybrid = voiceAssist === true
 
     console.log("Checking API Keys:", { 
       hasGemini: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY, 
@@ -625,6 +627,47 @@ RESPONSE STYLE:
 
     // Get response for last message
     const lastMessage = messages[messages.length - 1]?.content || ""
+    
+    // If voice assist is enabled, use LangGraph for hybrid mode
+    if (isHybrid) {
+      try {
+        const result = await runLangGraphAgent({
+          question: lastMessage,
+          userId,
+          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
+          isVoice: false,
+          isHybrid: true,
+          agentId,
+          currentPage,
+        })
+        
+        // Return both answers - long for chat, short for voice
+        // We'll stream the long answer and include short answer in metadata
+        const longAnswer = result.answer || "I couldn't generate a response."
+        const shortAnswer = result.shortAnswer || longAnswer.substring(0, 100) + "..."
+        
+        // Create a stream with the long answer, and append short answer at the end
+        const encoder = new TextEncoder()
+        const stream = new ReadableStream({
+          async start(controller) {
+            // Stream the long answer
+            controller.enqueue(encoder.encode(longAnswer))
+            // Append short answer with special marker
+            controller.enqueue(encoder.encode(`\n\n<!--VOICE_SUMMARY:${shortAnswer}-->`))
+            controller.close()
+          },
+        })
+        
+        return new StreamingTextResponse(stream, {
+          headers: {
+            'X-Voice-Summary': shortAnswer,
+          },
+        })
+      } catch (error: any) {
+        console.error("[Chat] LangGraph hybrid mode error:", error)
+        // Fall through to regular streaming
+      }
+    }
     
     // Try primary model first, fallback to secondary on rate limit
     try {
