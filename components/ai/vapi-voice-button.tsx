@@ -23,7 +23,16 @@ export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
 
   // Initialise Vapi once on client
   useEffect(() => {
-    if (!apiKey || !assistantId) return
+    console.log("[Vapi] Initializing with:", {
+      hasApiKey: !!apiKey,
+      apiKeyPrefix: apiKey?.slice(0, 6),
+      assistantId,
+    })
+    
+    if (!apiKey || !assistantId) {
+      console.warn("[Vapi] Missing API key or assistant ID", { apiKey: !!apiKey, assistantId: !!assistantId })
+      return
+    }
 
     const client = new VapiBase(apiKey)
     setVapi(client)
@@ -77,8 +86,15 @@ export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
     })
 
     client.on("error", (error: unknown) => {
-      console.error("[Vapi] Voice error:", error)
+      console.error("[Vapi] Voice error (raw):", error)
+      try {
+        const errorStr = JSON.stringify(error, null, 2)
+        console.error("[Vapi] Voice error (json):", errorStr)
+      } catch {
+        console.error("[Vapi] Voice error (string):", String(error))
+      }
       setIsStarting(false)
+      setIsConnected(false)
     })
 
     return () => {
@@ -88,11 +104,15 @@ export function VapiVoiceButton({ onFinalTranscript }: VapiVoiceButtonProps) {
   }, [apiKey, assistantId, onFinalTranscript])
 
   const toggleCall = () => {
-    if (!vapi || !assistantId) return
+    if (!vapi || !assistantId) {
+      console.error("[Vapi] Missing vapi client or assistantId", { vapi: !!vapi, assistantId })
+      return
+    }
     if (isConnected) {
       vapi.stop()
     } else {
       setIsStarting(true)
+      console.log("[Vapi] Starting call with assistant:", assistantId)
       vapi.start(assistantId)
     }
   }

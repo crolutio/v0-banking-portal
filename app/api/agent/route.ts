@@ -45,6 +45,14 @@ export async function POST(req: Request) {
     }
 
     const userId = requestedUserId || "11111111-1111-1111-1111-111111111111"
+    
+    console.log("[agent] Request received:", {
+      question,
+      requestedUserId,
+      userId,
+      agentId,
+      currentPage,
+    })
 
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
     const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
@@ -159,6 +167,7 @@ IMPORTANT:
       const args = call.args || {}
 
       try {
+        console.log(`[agent] Executing tool: ${name} with args:`, args)
         if (name === "getAccountsOverview") {
           results[name] = await getAccountsOverview(args.userId)
         } else if (name === "getRecentTransactions") {
@@ -174,6 +183,7 @@ IMPORTANT:
             requestedTerm,
           )
         }
+        console.log(`[agent] Tool ${name} result:`, JSON.stringify(results[name], null, 2).slice(0, 500))
       } catch (toolError) {
         console.error(`[agent] Tool ${name} failed:`, toolError)
         results[name] = { error: String(toolError) }
@@ -183,6 +193,22 @@ IMPORTANT:
     // -----------------------------------------------------------------------
     // 3) ANSWERING STEP: synthesize final spoken answer from tool results
     // -----------------------------------------------------------------------
+
+    // Check if we have any meaningful data
+    const hasData = Object.values(results).some((r: any) => {
+      if (!r || typeof r !== 'object') return false
+      if (r.error) return false
+      if (r.accounts && r.accounts.length > 0) return true
+      if (r.transactions && r.transactions.length > 0) return true
+      if (r.totalBalance !== undefined && r.totalBalance > 0) return true
+      return false
+    })
+
+    console.log(`[agent] Has data: ${hasData}`, {
+      resultKeys: Object.keys(results),
+      hasAccounts: results.getAccountsOverview?.accounts?.length > 0,
+      hasTransactions: results.getRecentTransactions?.transactions?.length > 0,
+    })
 
     const answerPrompt = `
 You are the "Bank of the Future" AI banking assistant.
@@ -201,7 +227,9 @@ ${JSON.stringify(results, null, 2)}
 TASK:
 - Provide a clear, concise answer that can be spoken aloud to the user.
 - Use the numbers and facts from the tool results; do not invent data.
-- Explain any important balances, spending patterns, or loan decisions that are relevant to the question.
+- If the tool results show empty arrays or zero values, it means no data was found for this user ID (${userId}).
+- If no data is found, politely explain that you couldn't find account information and suggest they may need to check their user ID or ensure their account is set up.
+- If data exists, explain any important balances, spending patterns, or loan decisions that are relevant to the question.
 - Keep the tone professional but friendly.
 - DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
 `

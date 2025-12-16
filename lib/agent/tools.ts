@@ -15,6 +15,7 @@ async function fetchTableByUser<T = any>(
   column: string = "user_id",
 ): Promise<T[]> {
   const supabase = createDirectClient()
+  console.log(`[agent/tools] Fetching ${table} for userId: ${userId}, column: ${column}`)
   const { data, error } = await supabase.from(table).select("*").eq(column, userId)
 
   if (error) {
@@ -22,6 +23,7 @@ async function fetchTableByUser<T = any>(
     return []
   }
 
+  console.log(`[agent/tools] Fetched ${data?.length ?? 0} rows from ${table}`)
   return (data ?? []) as T[]
 }
 
@@ -42,7 +44,8 @@ async function fetchUserTransactionsForAccounts(
   const supabase = createDirectClient()
   let query = supabase.from("transactions").select("*").in("account_id", accountIds)
 
-  if (typeof days === "number" && Number.isFinite(days) && days > 0) {
+  // Only apply date filter if days is provided and reasonable (< 2 years)
+  if (days !== undefined && days > 0 && days < 730) {
     const since = new Date()
     since.setDate(since.getDate() - days)
     query = query.gte("date", since.toISOString())
@@ -78,7 +81,13 @@ export interface AccountsOverview {
 }
 
 export async function getAccountsOverview(userId: string): Promise<AccountsOverview> {
+  console.log(`[agent/tools] getAccountsOverview called for userId: ${userId}`)
   const accounts = await fetchUserAccounts(userId)
+  console.log(`[agent/tools] Found ${accounts.length} accounts`)
+
+  if (accounts.length === 0) {
+    console.warn(`[agent/tools] No accounts found for userId: ${userId}`)
+  }
 
   const totalBalance = accounts.reduce((sum, a) => sum + toNumber(a.balance), 0)
   const availableCash = accounts.reduce(
@@ -86,7 +95,7 @@ export async function getAccountsOverview(userId: string): Promise<AccountsOverv
     0,
   )
 
-  return {
+  const result = {
     accounts: accounts.map((a) => ({
       id: a.id,
       name: a.name,
@@ -100,6 +109,14 @@ export async function getAccountsOverview(userId: string): Promise<AccountsOverv
     totalBalance,
     availableCash,
   }
+  
+  console.log(`[agent/tools] getAccountsOverview result:`, {
+    accountCount: result.accounts.length,
+    totalBalance,
+    availableCash,
+  })
+  
+  return result
 }
 
 // 2) Recent transactions & spending -----------------------------------------
@@ -113,10 +130,11 @@ export interface RecentTransactionsResult {
 
 export async function getRecentTransactions(
   userId: string,
-  days: number = 365,
+  days?: number,
 ): Promise<RecentTransactionsResult> {
   const accounts = await fetchUserAccounts(userId)
   const accountIds = accounts.map((a) => a.id)
+  // If days not specified, get all transactions (no date filter)
   const transactions = await fetchUserTransactionsForAccounts(accountIds, days)
 
   const spendingTx = transactions.filter((tx) => tx.type === "debit")
@@ -149,7 +167,8 @@ export interface SpendingAnalysisResult {
 }
 
 export async function analyzeSpending(userId: string): Promise<SpendingAnalysisResult> {
-  const { transactions } = await getRecentTransactions(userId, 730)
+  // Get all transactions (no date filter) for comprehensive analysis
+  const { transactions } = await getRecentTransactions(userId)
 
   const forecasts = generateForecasts(transactions)
   const totalPredictedSpend = forecasts.reduce((sum, f) => sum + f.predictedAmount, 0)
@@ -188,8 +207,8 @@ export async function analyzeLoanPreapprovalForUser(
   const loans = await fetchUserLoans(userId)
   const accountIds = accounts.map((a) => a.id)
 
-  // Use 90 days of tx history for income estimation
-  const transactions = await fetchUserTransactionsForAccounts(accountIds, 90)
+  // Get all transactions for income estimation (no date filter)
+  const transactions = await fetchUserTransactionsForAccounts(accountIds)
 
   const result = analyzeLoanPreApproval({
     requestedAmount,
