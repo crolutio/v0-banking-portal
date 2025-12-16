@@ -98,11 +98,42 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
     const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
+    // Fast keyword-based tool selection (skip Gemini planning for common queries)
+    const lowerQ = question.toLowerCase()
+    let toolCalls: ToolCall[] = []
+    let skipPlanning = false
+
+    // Quick keyword matching for common queries (much faster than Gemini planning)
+    if (lowerQ.includes("balance") || lowerQ.includes("account") || lowerQ.includes("money") || lowerQ.includes("cash")) {
+      toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
+      skipPlanning = true
+    } else if (lowerQ.includes("loan") && (lowerQ.includes("afford") || lowerQ.includes("eligib") || lowerQ.includes("preapprov") || /\d+/.test(question))) {
+      // Only use loan tool if it's clearly a financial loan question
+      const amountMatch = question.match(/(\d+)[,\s]*(?:000|k|thousand)/i)
+      const termMatch = question.match(/(\d+)\s*(?:month|year)/i)
+      toolCalls = [{
+        name: "analyzeLoanPreapprovalForUser",
+        args: {
+          userId,
+          requestedAmount: amountMatch ? Number(amountMatch[1]) * 1000 : 50000,
+          requestedTerm: termMatch ? Number(termMatch[1]) : 24,
+        }
+      }]
+      skipPlanning = true
+    } else if (lowerQ.includes("spend") || lowerQ.includes("saving") || lowerQ.includes("expense") || lowerQ.includes("transaction")) {
+      toolCalls = [
+        { name: "getRecentTransactions", args: { userId } },
+        { name: "analyzeSpending", args: { userId } },
+      ]
+      skipPlanning = true
+    }
+
     // -----------------------------------------------------------------------
-    // 1) PLANNING STEP: decide which tools to call and with what arguments
+    // 1) PLANNING STEP: Use Gemini only if keyword matching didn't work
     // -----------------------------------------------------------------------
 
-    const plannerPrompt = `
+    if (!skipPlanning) {
+      const plannerPrompt = `
 You are a planning agent for "Bank of the Future".
 
 The user asked:
@@ -232,7 +263,7 @@ IMPORTANT:
     }
 
     // -----------------------------------------------------------------------
-    // 3) ANSWERING STEP: synthesize final spoken answer from tool results
+    // 3) ANSWERING STEP: Fast formatting for simple queries, Gemini for complex ones
     // -----------------------------------------------------------------------
 
     // Check if we have any meaningful data
@@ -251,8 +282,39 @@ IMPORTANT:
       hasTransactions: results.getRecentTransactions?.transactions?.length > 0,
     })
 
-    const answerPrompt = `
-You are the "Bank of the Future" AI banking assistant.
+    // Fast answer formatting for simple queries (saves ~1-2 seconds)
+    let answer: string
+    const lowerQ = question.toLowerCase()
+    const isSimpleQuery = lowerQ.includes("balance") || lowerQ.includes("account") || lowerQ.includes("money") || lowerQ.includes("cash") || lowerQ.includes("how much")
+    
+    if (isSimpleQuery && results.getAccountsOverview) {
+      // Fast formatting for balance queries (short for voice)
+      const overview = results.getAccountsOverview
+      if (!hasData || !overview.accounts || overview.accounts.length === 0) {
+        answer = "I couldn't find your account information."
+      } else {
+        const total = overview.totalBalance || 0
+        const accountCount = overview.accounts.length
+        const currency = overview.accounts[0]?.currency || "AED"
+        answer = `Your total balance is ${total.toLocaleString()} ${currency} across ${accountCount} account${accountCount > 1 ? 's' : ''}.`
+      }
+      console.log("[agent] Using fast answer formatting (skipped Gemini synthesis)")
+    } else if (lowerQ.includes("loan") && results.analyzeLoanPreapprovalForUser) {
+      // Fast formatting for loan queries (short for voice)
+      const loan = results.analyzeLoanPreapprovalForUser
+      if (loan.error || !loan.approved) {
+        answer = loan.reasoning || "I couldn't process your loan request."
+      } else {
+        const monthly = loan.monthlyPayment || 0
+        const amount = loan.requestedAmount || 0
+        answer = `You're approved for ${amount.toLocaleString()} AED. Monthly payment: ${monthly.toLocaleString()} AED over ${loan.requestedTerm || 24} months.`
+      }
+      console.log("[agent] Using fast answer formatting (skipped Gemini synthesis)")
+    } else {
+      // Complex queries need Gemini for natural language generation
+      console.log("[agent] Using Gemini for answer synthesis (complex query)")
+      const answerPrompt = `
+You are the "Bank of the Future" AI banking assistant speaking to a user via voice.
 
 User ID: ${userId}
 Agent persona: ${agentId}
@@ -266,25 +328,28 @@ You have the following structured tool results (JSON):
 ${JSON.stringify(results, null, 2)}
 
 TASK:
-- Provide a clear, concise answer that can be spoken aloud to the user.
+- Provide a SHORT, concise answer that can be spoken aloud (1-3 sentences maximum).
+- This is for voice interaction - keep it brief to avoid long pauses.
 - Use the numbers and facts from the tool results; do not invent data.
 - If the tool results show empty arrays or zero values, it means no data was found for this user ID (${userId}).
-- If no data is found, politely explain that you couldn't find account information and suggest they may need to check their user ID or ensure their account is set up.
-- If data exists, explain any important balances, spending patterns, or loan decisions that are relevant to the question.
+- If no data is found, briefly say you couldn't find account information.
+- If data exists, mention only the most relevant numbers or facts that directly answer the question.
 - Keep the tone professional but friendly.
-- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
+- DO NOT include markdown, bullet points, code blocks, or long explanations. Just 1-3 short sentences.
+- Example: "Your total balance is 15,000 AED across 2 accounts." NOT "You have multiple accounts with various balances totaling..."
 `
 
-    const answerResult = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: answerPrompt }],
-        },
-      ],
-    })
+      const answerResult = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: answerPrompt }],
+          },
+        ],
+      })
 
-    const answer = answerResult.response.text()
+      answer = answerResult.response.text()
+    }
 
     // Detect if this is a Vapi request
     // Vapi API Request tool sends: { question, userId, ... } or { message: { toolCalls: [...] } }

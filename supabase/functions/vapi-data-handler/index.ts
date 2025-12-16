@@ -647,7 +647,7 @@ Examples:
 - If they're greeting you, greet them back and offer to help with banking questions.
 - If they're asking general questions, provide helpful information.
 
-Keep it brief, friendly, and professional. 2-3 sentences maximum for voice.
+Keep it brief, friendly, and professional. 1-2 sentences maximum for voice.
 `
         try {
           resultMessage = await callGemini(conversationalPrompt, geminiApiKey)
@@ -661,7 +661,7 @@ Keep it brief, friendly, and professional. 2-3 sentences maximum for voice.
     } else if (geminiApiKey) {
       // Tools were called, synthesize answer from results
       const answerPrompt = `
-You are the "Bank of the Future" AI banking assistant.
+You are the "Bank of the Future" AI banking assistant speaking to a user via voice.
 
 User ID: ${userId}
 The user asked: "${userMessage}"
@@ -670,13 +670,15 @@ Tool results:
 ${JSON.stringify(results, null, 2)}
 
 TASK:
-- Provide a clear, concise answer that can be spoken aloud.
+- Provide a SHORT, concise answer that can be spoken aloud (1-3 sentences maximum).
+- This is for voice interaction - keep it brief to avoid long pauses.
 - Use the numbers and facts from the tool results; do not invent data.
-- If tool results show empty arrays or zero values, politely explain you couldn't find account information for user ID ${userId}.
-- Format currency as "AED X,XXX.XX" when mentioning amounts.
+- If tool results show empty arrays or zero values, briefly say you couldn't find account information.
+- If data exists, mention only the most relevant numbers or facts that directly answer the question.
+- Format currency as "AED X,XXX" when mentioning amounts (no decimals for voice).
 - Keep the tone professional but friendly.
-- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
-- Keep it brief - 2-3 sentences maximum for voice.
+- DO NOT include markdown, bullet points, code blocks, or long explanations. Just 1-3 short sentences.
+- Example: "Your total balance is 15,000 AED across 2 accounts." NOT "You have multiple accounts with various balances totaling..."
 `
       try {
         resultMessage = await callGemini(answerPrompt, geminiApiKey)
