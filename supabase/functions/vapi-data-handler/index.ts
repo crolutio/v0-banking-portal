@@ -1,15 +1,60 @@
-// Supabase Edge Function for Vapi - Banking Agent
-// This handles Vapi tool calls and returns banking data
+// Supabase Edge Function for Vapi - Banking Agent with Planning
+// This handles Vapi tool calls and returns banking data using AI planning
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 console.info('Vapi-Supabase Banking Function Started');
 
-// Helper functions
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 function toNumber(value: any): number {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
 }
+
+function stripJson(text: string): string {
+  const jsonMatch = text.match(/```json([\s\S]*?)```/i)
+  if (jsonMatch) return jsonMatch[1].trim()
+  const braceIndex = text.indexOf("{")
+  if (braceIndex >= 0) {
+    const lastBrace = text.lastIndexOf("}")
+    if (lastBrace > braceIndex) {
+      return text.slice(braceIndex, lastBrace + 1)
+    }
+  }
+  return text.trim()
+}
+
+async function callGemini(prompt: string, apiKey: string): Promise<string> {
+  if (!apiKey) {
+    throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY")
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Gemini API error: ${error}`)
+  }
+
+  const data = await response.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response."
+}
+
+// ============================================================================
+// DATABASE QUERY FUNCTIONS
+// ============================================================================
 
 async function fetchTableByUser(
   supabase: any,
@@ -28,6 +73,38 @@ async function fetchTableByUser(
   console.log(`[vapi-data-handler] Fetched ${data?.length ?? 0} rows from ${table}`)
   return data ?? []
 }
+
+async function fetchUserTransactionsForAccounts(
+  supabase: any,
+  accountIds: string[],
+  days?: number,
+): Promise<any[]> {
+  if (accountIds.length === 0) return []
+
+  let query = supabase.from("transactions").select("*").in("account_id", accountIds)
+
+  if (days !== undefined && days > 0 && days < 730) {
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+    query = query.gte("date", since.toISOString())
+  }
+
+  const { data, error } = await query.order("date", { ascending: false })
+
+  if (error) {
+    console.error("[vapi-data-handler] Error fetching transactions:", error.message)
+    return []
+  }
+
+  return (data ?? []).map((t: any) => ({
+    ...t,
+    amount: toNumber(t.amount),
+  }))
+}
+
+// ============================================================================
+// BANKING TOOLS
+// ============================================================================
 
 async function getAccountsOverview(supabase: any, userId: string) {
   const accounts = await fetchTableByUser(supabase, "accounts", userId)
@@ -70,26 +147,7 @@ async function getRecentTransactions(supabase: any, userId: string, days?: numbe
     return { transactions: [], recent: [], monthlySpending: 0, monthlyIncome: 0 }
   }
 
-  let query = supabase.from("transactions").select("*").in("account_id", accountIds)
-
-  // Only apply date filter if days is provided and reasonable (< 2 years)
-  if (days !== undefined && days > 0 && days < 730) {
-    const since = new Date()
-    since.setDate(since.getDate() - days)
-    query = query.gte("date", since.toISOString())
-  }
-
-  const { data, error } = await query.order("date", { ascending: false })
-
-  if (error) {
-    console.error("[vapi-data-handler] Error fetching transactions:", error.message)
-    return { transactions: [], recent: [], monthlySpending: 0, monthlyIncome: 0 }
-  }
-
-  const transactions = (data ?? []).map((t: any) => ({
-    ...t,
-    amount: toNumber(t.amount),
-  }))
+  const transactions = await fetchUserTransactionsForAccounts(supabase, accountIds, days)
 
   const spendingTx = transactions.filter((tx: any) => tx.type === "debit")
   const incomeTx = transactions.filter((tx: any) => tx.type === "credit")
@@ -105,30 +163,250 @@ async function getRecentTransactions(supabase: any, userId: string, days?: numbe
   }
 }
 
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  if (!apiKey) {
-    throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY")
+// Forecasting logic (simplified from lib/forecasting/simple-forecast.ts)
+function generateForecasts(transactions: any[]): any[] {
+  const history: Record<string, Record<string, number>> = {}
+  const now = new Date()
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1)
+
+  transactions.forEach((tx) => {
+    const d = new Date(tx.date)
+    if (d < sixMonthsAgo) return
+    if (tx.type === "credit") return
+
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const cat = tx.category || "uncategorized"
+
+    if (!history[cat]) history[cat] = {}
+    history[cat][monthKey] = (history[cat][monthKey] || 0) + Math.abs(toNumber(tx.amount))
+  })
+
+  const forecasts: any[] = []
+  const months: string[] = []
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      }),
-    },
+  Object.entries(history).forEach(([category, monthlyData]) => {
+    const values = months.map((m) => monthlyData[m] || 0)
+    const prediction = values[0] * 0.5 + values[1] * 0.3 + values[2] * 0.2
+    
+    let trend: "up" | "down" | "stable" = "stable"
+    if (values[0] > values[1] * 1.1) trend = "up"
+    else if (values[0] < values[1] * 0.9) trend = "down"
+
+    const dataPoints = values.filter((v) => v > 0).length
+    const confidence = dataPoints === 3 ? 0.8 : dataPoints === 2 ? 0.6 : 0.3
+
+    if (prediction > 0) {
+      forecasts.push({
+        category,
+        predictedAmount: Math.round(prediction),
+        confidence,
+        trend,
+      })
+    }
+  })
+
+  return forecasts.sort((a, b) => b.predictedAmount - a.predictedAmount)
+}
+
+// Savings suggestions logic (simplified from lib/savings/suggestions.ts)
+function generateSavingsSuggestions(transactions: any[]): any[] {
+  const suggestions: any[] = []
+  
+  const subscriptions: Record<string, { count: number, amount: number, merchant: string }> = {}
+  
+  transactions.forEach(tx => {
+    if (tx.category === 'subscriptions' || tx.category === 'entertainment' || (tx.description || '').toLowerCase().includes('subscription')) {
+      const key = `${tx.merchant || tx.description}-${tx.amount}`
+      if (!subscriptions[key]) subscriptions[key] = { count: 0, amount: tx.amount, merchant: tx.merchant || tx.description }
+      subscriptions[key].count++
+    }
+  })
+
+  Object.values(subscriptions).forEach(sub => {
+    if (sub.count >= 2) {
+      suggestions.push({
+        id: `sub-${sub.merchant.replace(/\s+/g, '-')}`,
+        title: `Review Subscription: ${sub.merchant}`,
+        description: `You have a recurring payment of AED ${sub.amount}. Do you still use this?`,
+        potentialSavings: sub.amount,
+        type: "subscription",
+        confidence: "high"
+      })
+    }
+  })
+
+  const fees = transactions.filter(tx => tx.category === 'fees')
+  const totalFees = fees.reduce((sum, tx) => sum + toNumber(tx.amount), 0)
+  
+  if (totalFees > 50) {
+    suggestions.push({
+      id: "reduce-fees",
+      title: "Reduce Bank Fees",
+      description: `You spent AED ${totalFees.toFixed(0)} on fees recently. Check if you can switch accounts or avoid ATM charges.`,
+      potentialSavings: totalFees,
+      type: "fees",
+      confidence: "medium"
+    })
+  }
+
+  return suggestions.sort((a, b) => b.potentialSavings - a.potentialSavings).slice(0, 3)
+}
+
+async function analyzeSpending(supabase: any, userId: string) {
+  const { transactions } = await getRecentTransactions(supabase, userId)
+  
+  const forecasts = generateForecasts(transactions)
+  const totalPredictedSpend = forecasts.reduce((sum, f) => sum + f.predictedAmount, 0)
+  const savingsOpportunities = generateSavingsSuggestions(transactions)
+
+  const spendingOnly = transactions.filter((tx: any) => tx.type === "debit")
+  const categoryTotals = spendingOnly.reduce((acc: Record<string, number>, tx: any) => {
+    const cat = tx.category || "uncategorized"
+    acc[cat] = (acc[cat] || 0) + Math.abs(toNumber(tx.amount))
+    return acc
+  }, {})
+
+  const topEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
+  const topSpendingCategory = topEntry
+    ? { category: topEntry[0], amount: topEntry[1] }
+    : null
+
+  return {
+    forecasts,
+    totalPredictedSpend,
+    savingsOpportunities,
+    topSpendingCategory,
+  }
+}
+
+// Loan preapproval logic (simplified from lib/calculations/loan-preapproval.ts)
+function calculateMonthlyPayment(principal: number, annualRate: number, termMonths: number): number {
+  const monthlyRate = annualRate / 100 / 12
+  
+  if (monthlyRate === 0) {
+    return principal / termMonths
+  }
+  
+  const payment = principal * 
+    (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) /
+    (Math.pow(1 + monthlyRate, termMonths) - 1)
+  
+  return Math.round(payment * 100) / 100
+}
+
+function determineInterestRate(creditScore: number): number {
+  if (creditScore >= 750) return 4.99
+  if (creditScore >= 700) return 5.99
+  if (creditScore >= 650) return 7.49
+  return 9.99
+}
+
+function estimateMonthlyIncome(transactions: any[]): number {
+  const salaryTransactions = transactions.filter(tx => 
+    tx.type === 'credit' && 
+    (tx.category === 'salary' || 
+     (tx.description || '').toLowerCase().includes('salary') ||
+     (tx.description || '').toLowerCase().includes('income'))
   )
 
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Gemini API error: ${error}`)
+  if (salaryTransactions.length === 0) {
+    return 0
   }
 
-  const data = await response.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response."
+  const recentSalaries = salaryTransactions
+    .slice(0, 3)
+    .map(tx => toNumber(tx.amount))
+
+  const avgSalary = recentSalaries.reduce((sum, amt) => sum + amt, 0) / recentSalaries.length
+  
+  return Math.round(avgSalary)
 }
+
+async function analyzeLoanPreapprovalForUser(
+  supabase: any,
+  userId: string,
+  requestedAmount: number,
+  requestedTerm: number,
+  creditScore: number = 700,
+) {
+  const accounts = await fetchTableByUser(supabase, "accounts", userId)
+  const loans = await fetchTableByUser(supabase, "loans", userId)
+  const accountIds = accounts.map((a: any) => a.id)
+  const transactions = await fetchUserTransactionsForAccounts(supabase, accountIds)
+
+  const monthlyIncome = estimateMonthlyIncome(transactions)
+  const existingMonthlyDebt = loans.reduce((sum: number, loan: any) => sum + toNumber(loan.monthlyPayment || loan.monthly_payment || 0), 0)
+  const interestRate = determineInterestRate(creditScore)
+  const proposedMonthlyPayment = calculateMonthlyPayment(requestedAmount, interestRate, requestedTerm)
+  const totalMonthlyDebt = existingMonthlyDebt + proposedMonthlyPayment
+  const dtiRatio = monthlyIncome > 0 ? totalMonthlyDebt / monthlyIncome : 1.0
+  const dtiPercentage = Math.round(dtiRatio * 100)
+
+  const totalRepayment = proposedMonthlyPayment * requestedTerm
+  const totalInterest = totalRepayment - requestedAmount
+
+  const maxDTI = 0.50
+  const approved = dtiRatio <= maxDTI && monthlyIncome > 0
+
+  const strengths: string[] = []
+  const concerns: string[] = []
+  const conditions: string[] = []
+
+  if (dtiRatio < 0.35) {
+    strengths.push('Excellent debt-to-income ratio - well below 35%')
+  } else if (dtiRatio < 0.42) {
+    strengths.push('Good debt-to-income ratio - comfortably within guidelines')
+  }
+
+  if (creditScore >= 750) {
+    strengths.push('Excellent credit score qualifies for best rates')
+  } else if (creditScore >= 700) {
+    strengths.push('Good credit score')
+  }
+
+  const totalBalance = accounts.reduce((sum: number, acc: any) => sum + toNumber(acc.balance), 0)
+  if (totalBalance > requestedAmount * 0.1) {
+    strengths.push(`Strong cash reserves (AED ${totalBalance.toFixed(0)})`)
+  }
+
+  if (dtiRatio > 0.45) {
+    concerns.push(`High DTI ratio at ${dtiPercentage}% - near maximum threshold of 50%`)
+  } else if (dtiRatio > 0.40) {
+    concerns.push(`DTI ratio at ${dtiPercentage}% - approaching upper limit`)
+  }
+
+  if (creditScore < 650) {
+    concerns.push('Credit score below optimal range - higher interest rate applied')
+  }
+
+  if (approved) {
+    conditions.push('Subject to identity verification and document submission')
+    conditions.push('Final approval subject to credit bureau report')
+  }
+
+  return {
+    approved,
+    monthlyPayment: proposedMonthlyPayment,
+    interestRate,
+    totalInterest,
+    totalRepayment,
+    dtiRatio,
+    dtiPercentage,
+    strengths,
+    concerns,
+    conditions,
+    requestedAmount,
+    requestedTerm,
+  }
+}
+
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
 Deno.serve(async (req: Request) => {
   try {
@@ -144,7 +422,6 @@ Deno.serve(async (req: Request) => {
     console.log("Incoming Vapi Payload:", JSON.stringify(body, null, 2))
 
     // Extract user message/question from Vapi payload
-    // Vapi sends the user's question in different places depending on the event type
     const userMessage = body.message?.content || 
                        body.transcript || 
                        body.userMessage || 
@@ -159,52 +436,230 @@ Deno.serve(async (req: Request) => {
 
     console.log("[vapi-data-handler] Processing:", { userMessage, userId })
 
-    // --- C. DETERMINE WHICH TOOLS TO CALL ---
-    const lowerQ = userMessage.toLowerCase()
-    let toolCalls: Array<{ name: string; args: any }> = []
+    // --- C. PRE-ANALYSIS STEP: Understand intent BEFORE calling tools ---
+    let needsTools = true
+    let directAnswer: string | null = null
 
-    if (lowerQ.includes("loan") || lowerQ.includes("borrow")) {
-      // Extract loan amount and term from question if possible, otherwise use defaults
-      const amountMatch = userMessage.match(/(\d+)[,\s]*(?:000|k|thousand)/i)
-      const termMatch = userMessage.match(/(\d+)\s*(?:month|year)/i)
-      
-      toolCalls = [{
-        name: "getAccountsOverview",
-        args: { userId }
-      }]
-      // Note: Loan analysis would require more complex logic, simplified for now
-    } else if (lowerQ.includes("spend") || lowerQ.includes("saving") || lowerQ.includes("expense") || lowerQ.includes("transaction")) {
-      toolCalls = [
-        { name: "getRecentTransactions", args: { userId } },
-        { name: "getAccountsOverview", args: { userId } },
-      ]
-    } else {
-      // Default: get account overview
-      toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
+    if (geminiApiKey) {
+      const analysisPrompt = `
+You are an intent analyzer for "Bank of the Future" banking assistant.
+
+The user asked:
+"${userMessage}"
+
+Analyze this question and determine:
+
+1. Is this a question about the user's banking data (accounts, transactions, spending, loans)?
+   - Examples that NEED tools: "What's my balance?", "How much did I spend?", "Can I get a loan?"
+   - Examples that DON'T need tools: "Hello", "What can you do?", "Tell me about loans in general"
+
+2. Is this a conversational/general question that doesn't require database access?
+   - Examples: Greetings, general banking questions, travel questions (like "loan to Japan" means travel, not financial loan)
+
+3. Are there any ambiguous phrases that need clarification?
+   - "loan to Japan" = travel question, answer directly without calling loan tool
+   - "loan for 50,000" = financial loan question, needs loan tool
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "needsTools": true or false,
+  "directAnswer": "If needsTools is false, provide a helpful direct answer here. Otherwise null.",
+  "reasoning": "Brief explanation of why tools are or aren't needed"
+}
+
+If needsTools is false, provide a helpful, conversational answer directly. If true, return null for directAnswer.
+`
+
+      try {
+        const analysisResult = await callGemini(analysisPrompt, geminiApiKey)
+        const analysisJson = stripJson(analysisResult)
+        const analysis = JSON.parse(analysisJson)
+        
+        if (analysis.needsTools === false && analysis.directAnswer) {
+          needsTools = false
+          directAnswer = analysis.directAnswer
+          console.log("[vapi-data-handler] Pre-analysis determined no tools needed:", analysis.reasoning)
+        } else {
+          console.log("[vapi-data-handler] Pre-analysis determined tools needed:", analysis.reasoning)
+        }
+      } catch (err) {
+        console.warn("[vapi-data-handler] Pre-analysis failed, proceeding with tools:", err)
+        // Continue with tools if analysis fails
+      }
     }
 
-    // --- D. EXECUTE TOOLS ---
+    // If we have a direct answer, return it immediately without calling tools
+    if (!needsTools && directAnswer) {
+      const toolCall = body.message?.toolCalls?.[0]
+      
+      if (toolCall) {
+        return new Response(JSON.stringify({
+          results: [{
+            toolCallId: toolCall.id,
+            result: directAnswer
+          }]
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+      } else {
+        return new Response(JSON.stringify({
+          answer: directAnswer,
+          toolCalls: [],
+          toolResults: {},
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+    }
+
+    // --- D. PLANNING STEP: Use Gemini to decide which tools to call ---
+    let toolCalls: Array<{ name: string; args: any }> = []
+
+    if (geminiApiKey) {
+      const plannerPrompt = `
+You are a planning agent for "Bank of the Future".
+
+The user asked:
+"${userMessage}"
+
+You have access to these tools:
+
+1) getAccountsOverview
+   - description: Get all of the user's accounts, balances, and total cash.
+   - args: { "userId": string }
+
+2) getRecentTransactions
+   - description: Get recent transactions and spending/income totals for a time window.
+   - args: { "userId": string, "days": number }  // days defaults to 30 if omitted, or omit for all transactions
+
+3) analyzeSpending
+   - description: Analyze spending patterns, forecasts, and savings opportunities.
+   - args: { "userId": string }
+
+4) analyzeLoanPreapprovalForUser
+   - description: Analyze whether the user can afford a requested loan and compute monthly payment, DTI, and strengths/concerns.
+   - args: { "userId": string, "requestedAmount": number, "requestedTerm": number, "creditScore": number (optional, defaults to 700) }
+
+Your job:
+- Choose the minimal set of tools needed to answer the question well.
+- If the question is very general ("how is my spending?"), you might call getRecentTransactions and analyzeSpending.
+- If the user is asking about FINANCIAL loans (e.g., "loan for 50,000 AED"), call analyzeLoanPreapprovalForUser with a reasonable requestedAmount and requestedTerm inferred from the question.
+- IMPORTANT: Do NOT call loan tools for travel questions (e.g., "loan to Japan" means travel, not a financial loan). Return empty toolCalls for non-financial questions.
+- If the question is purely general knowledge, conversational, or not about the user's banking data, return an empty list of tool calls.
+
+IMPORTANT:
+- Always include "userId" in every tool call with value "${userId}".
+- Respond ONLY with valid JSON, no explanations, in this exact shape:
+
+{
+  "toolCalls": [
+    { "name": "getAccountsOverview", "args": { "userId": "${userId}" } },
+    { "name": "getRecentTransactions", "args": { "userId": "${userId}", "days": 30 } }
+  ]
+}
+`
+
+      try {
+        const rawPlan = await callGemini(plannerPrompt, geminiApiKey)
+        const jsonText = stripJson(rawPlan)
+        const parsed = JSON.parse(jsonText)
+        if (Array.isArray(parsed.toolCalls)) {
+          toolCalls = parsed.toolCalls
+        }
+      } catch (err) {
+        console.warn("[vapi-data-handler] Failed to parse planning JSON, falling back to default plan.", err)
+      }
+    }
+
+    // Fallback: simple default plan based on keywords
+    if (toolCalls.length === 0) {
+      const lowerQ = userMessage.toLowerCase()
+      if (lowerQ.includes("loan") || lowerQ.includes("borrow")) {
+        const amountMatch = userMessage.match(/(\d+)[,\s]*(?:000|k|thousand)/i)
+        const termMatch = userMessage.match(/(\d+)\s*(?:month|year)/i)
+        toolCalls = [{
+          name: "analyzeLoanPreapprovalForUser",
+          args: {
+            userId,
+            requestedAmount: amountMatch ? Number(amountMatch[1]) * 1000 : 50000,
+            requestedTerm: termMatch ? Number(termMatch[1]) : 24,
+          }
+        }]
+      } else if (lowerQ.includes("spend") || lowerQ.includes("saving") || lowerQ.includes("expense") || lowerQ.includes("transaction")) {
+        toolCalls = [
+          { name: "getRecentTransactions", args: { userId } },
+          { name: "analyzeSpending", args: { userId } },
+        ]
+      } else {
+        toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
+      }
+    }
+
+    // Ensure userId is present in all tool calls
+    toolCalls = toolCalls.map((call) => ({
+      ...call,
+      args: { ...(call.args || {}), userId: call.args?.userId || userId },
+    }))
+
+    // --- E. EXECUTE TOOLS ---
     const results: Record<string, any> = {}
     
     for (const call of toolCalls) {
       try {
-        console.log(`[vapi-data-handler] Executing tool: ${call.name}`)
+        console.log(`[vapi-data-handler] Executing tool: ${call.name}`, call.args)
         if (call.name === "getAccountsOverview") {
           results.getAccountsOverview = await getAccountsOverview(supabase, call.args.userId)
         } else if (call.name === "getRecentTransactions") {
           results.getRecentTransactions = await getRecentTransactions(supabase, call.args.userId, call.args.days)
+        } else if (call.name === "analyzeSpending") {
+          results.analyzeSpending = await analyzeSpending(supabase, call.args.userId)
+        } else if (call.name === "analyzeLoanPreapprovalForUser") {
+          results.analyzeLoanPreapprovalForUser = await analyzeLoanPreapprovalForUser(
+            supabase,
+            call.args.userId,
+            call.args.requestedAmount || 50000,
+            call.args.requestedTerm || 24,
+            call.args.creditScore || 700,
+          )
         }
+        console.log(`[vapi-data-handler] Tool ${call.name} completed`)
       } catch (err) {
         console.error(`[vapi-data-handler] Tool ${call.name} failed:`, err)
         results[call.name] = { error: String(err) }
       }
     }
 
-    // --- E. GENERATE NATURAL LANGUAGE ANSWER ---
+    // --- F. GENERATE NATURAL LANGUAGE ANSWER ---
     let resultMessage = ""
     
-    if (geminiApiKey) {
-      // Use Gemini to synthesize a natural answer
+    // If no tools were called, generate a conversational answer
+    if (toolCalls.length === 0) {
+      if (geminiApiKey) {
+        const conversationalPrompt = `
+You are the "Bank of the Future" AI banking assistant.
+
+The user asked: "${userMessage}"
+
+This question doesn't require accessing their banking data. Provide a helpful, conversational answer.
+
+Examples:
+- If they said "loan to Japan" (travel), explain you can help with travel planning or travel loans if needed.
+- If they're greeting you, greet them back and offer to help with banking questions.
+- If they're asking general questions, provide helpful information.
+
+Keep it brief, friendly, and professional. 2-3 sentences maximum for voice.
+`
+        try {
+          resultMessage = await callGemini(conversationalPrompt, geminiApiKey)
+        } catch (err) {
+          console.error("[vapi-data-handler] Conversational answer generation failed:", err)
+          resultMessage = "I'm here to help with your banking questions. You can ask me about your accounts, transactions, spending, or loans."
+        }
+      } else {
+        resultMessage = "I'm here to help with your banking questions. You can ask me about your accounts, transactions, spending, or loans."
+      }
+    } else if (geminiApiKey) {
+      // Tools were called, synthesize answer from results
       const answerPrompt = `
 You are the "Bank of the Future" AI banking assistant.
 
@@ -227,17 +682,13 @@ TASK:
         resultMessage = await callGemini(answerPrompt, geminiApiKey)
       } catch (err) {
         console.error("[vapi-data-handler] Gemini call failed:", err)
-        // Fallback to simple response
         resultMessage = formatSimpleResponse(results, userId)
       }
     } else {
-      // Fallback: simple formatting without Gemini
       resultMessage = formatSimpleResponse(results, userId)
     }
 
-    // --- F. FORMAT RESPONSE FOR VAPI ---
-    // Vapi expects results in this format if called as a tool
-    // If Vapi is calling this as a server function, we need to check the request structure
+    // --- G. FORMAT RESPONSE FOR VAPI ---
     const toolCall = body.message?.toolCalls?.[0]
     
     if (toolCall) {
@@ -279,6 +730,16 @@ TASK:
 function formatSimpleResponse(results: Record<string, any>, userId: string): string {
   const accounts = results.getAccountsOverview
   const transactions = results.getRecentTransactions
+  const spending = results.analyzeSpending
+  const loan = results.analyzeLoanPreapprovalForUser
+
+  if (loan) {
+    return `Loan analysis: ${loan.approved ? 'Approved' : 'Not approved'}. Monthly payment: AED ${loan.monthlyPayment.toFixed(2)}. DTI: ${loan.dtiPercentage}%.`
+  }
+
+  if (spending) {
+    return `Spending analysis: Predicted next month spend: AED ${spending.totalPredictedSpend.toFixed(2)}. Top category: ${spending.topSpendingCategory?.category || 'N/A'}.`
+  }
 
   if (accounts && accounts.accounts && accounts.accounts.length > 0) {
     const total = accounts.totalBalance.toFixed(2)
@@ -289,4 +750,3 @@ function formatSimpleResponse(results: Record<string, any>, userId: string): str
     return `I couldn't find any account information for user ID ${userId}. Please check that the user ID is correct and that accounts exist in the database.`
   }
 }
-

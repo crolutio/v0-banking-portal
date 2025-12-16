@@ -30,8 +30,24 @@ function stripJson(text: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { question, userId: requestedUserId, agentId = "banker", currentPage = "/home" } =
-      await req.json()
+    const body = await req.json()
+    
+    // Handle Vapi tool call format OR direct API call format
+    // Vapi sends: { message: { content: "..." }, userId: "...", ... }
+    // Direct API sends: { question: "...", userId: "...", ... }
+    const question = body.message?.content || 
+                     body.transcript || 
+                     body.userMessage || 
+                     body.question
+    
+    const requestedUserId = body.userId || 
+                            body.user?.id || 
+                            body.variables?.userId ||
+                            body.requestedUserId
+    
+    const agentId = body.agentId || "banker"
+    const currentPage = body.currentPage || "/home"
+    const toolCall = body.message?.toolCalls?.[0] // Store for response formatting
 
     if (!question || typeof question !== "string") {
       return NextResponse.json({ error: "Missing 'question' string" }, { status: 400 })
@@ -245,6 +261,20 @@ TASK:
 
     const answer = answerResult.response.text()
 
+    // Handle Vapi tool call response format (if request came from Vapi)
+    if (toolCall) {
+      // Vapi expects this format for tool calls
+      return NextResponse.json({
+        results: [
+          {
+            toolCallId: toolCall.id,
+            result: answer
+          }
+        ]
+      })
+    }
+
+    // Standard API response format
     return NextResponse.json({ answer, toolCalls, toolResults: results })
   } catch (error: any) {
     console.error("[agent] Error:", error)
