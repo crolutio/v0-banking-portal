@@ -583,7 +583,7 @@ export function FloatingChatBubble() {
           
           // Remove the voice summary marker from the displayed message
           if (voiceSummaryMatch) {
-            message.content = message.content.replace(/<!--VOICE_SUMMARY:.+?-->/s, "").trim()
+            message.content = message.content.replace(/<!--VOICE_SUMMARY:[\s\S]+?-->/, "").trim()
           }
           
           // Use browser TTS to speak the short answer
