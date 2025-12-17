@@ -1,7 +1,52 @@
 import { NextResponse } from "next/server"
 import { runLangGraphAgent } from "@/lib/agent/langgraph-agent"
+import { createDirectClient } from "@/lib/supabase/direct-client"
 
 export const runtime = "nodejs"
+
+// Simple, fast voice-only handler for Vapi.
+// Does NOT use LangGraph – it just pulls key numbers for the user.
+async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
+  try {
+    const supabase = createDirectClient()
+
+    const { data: accounts, error } = await supabase
+      .from("accounts")
+      .select("id, name, balance, available_balance")
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error("[agent/voice] Error fetching accounts:", error.message)
+      return "I'm sorry, I couldn't access your account information right now. Please try again."
+    }
+
+    if (!accounts || accounts.length === 0) {
+      return "I couldn't find your account information."
+    }
+
+    const toNumber = (value: any) => {
+      const num = Number(value)
+      return Number.isFinite(num) ? num : 0
+    }
+
+    const totalBalance = accounts.reduce((sum: number, a: any) => sum + toNumber(a.balance), 0)
+    const availableCash = accounts.reduce(
+      (sum: number, a: any) => sum + toNumber(a.available_balance ?? a.balance),
+      0,
+    )
+
+    const accountCount = accounts.length
+    const accountLabel = accountCount === 1 ? "account" : "accounts"
+
+    // Short, voice-friendly summary – Vapi will just speak this string.
+    return `You have ${accountCount} ${accountLabel}. Your total balance is AED ${totalBalance.toFixed(
+      2,
+    )}, and your available cash is AED ${availableCash.toFixed(2)}.`
+  } catch (error: any) {
+    console.error("[agent/voice] Unexpected error in buildSimpleVoiceAnswer:", error)
+    return "I'm sorry, I had trouble looking up your information. Please try again."
+  }
+}
 
 export async function POST(req: Request) {
   let body: any = {}
@@ -71,24 +116,106 @@ export async function POST(req: Request) {
       currentPage,
     })
 
+    // Detect if this is a Vapi request (voice-only path).
+    // Vapi API Request / tools send: { question, userId, ... } or { message: { toolCalls: [...] } }
+    const isVapiRequest = !!(
+      body.message?.toolCalls ||
+      toolCall ||
+      body.toolCallId ||
+      body.function?.name || // Custom tool format
+      (body.question && !body.agentId) // Has question but no agentId (likely Vapi)
+    )
+
     // -----------------------------------------------------------------------
-    // Use LangGraph Agent (for both voice and text)
+    // VOICE-ONLY PATH (Vapi) – NO LANGGRAPH
     // -----------------------------------------------------------------------
-    const isVoice = !!(body.message?.toolCalls || toolCall || body.toolCallId)
-    
-    console.log(`[agent] Running LangGraph agent for user: ${userId} (voice: ${isVoice})`)
+    if (isVapiRequest) {
+      console.log("[agent] Handling Vapi voice request WITHOUT LangGraph", {
+        userId,
+        agentId,
+        currentPage,
+      })
+
+      let answer = await buildSimpleVoiceAnswer(userId)
+
+      // Basic cleanup – keep it voice friendly.
+      answer = answer
+        .replace(/[^\x00-\x7F]/g, "") // Remove non-ASCII
+        .replace(/\s+/g, " ")
+        .trim()
+
+      if (!/[.!?]$/.test(answer)) {
+        answer = answer + "."
+      }
+
+      console.log("[agent] Simple voice answer:", answer)
+
+      // Vapi tool call formats
+      if (toolCall?.id) {
+        return NextResponse.json(
+          {
+            results: [
+              {
+                toolCallId: toolCall.id,
+                result: answer,
+              },
+            ],
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+            },
+          },
+        )
+      } else if (body.toolCallId) {
+        return NextResponse.json(
+          {
+            results: [
+              {
+                toolCallId: body.toolCallId,
+                result: answer,
+              },
+            ],
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+            },
+          },
+        )
+      }
+
+      // Fallback Vapi format without explicit toolCallId
+      return NextResponse.json(
+        {
+          result: answer,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+          },
+        },
+      )
+    }
+
+    // -----------------------------------------------------------------------
+    // TEXT / HYBRID PATH – LANGGRAPH
+    // -----------------------------------------------------------------------
+    console.log(`[agent] Running LangGraph agent for user: ${userId} (voice: false)`)
     
     let answer: string
     try {
-      // Add timeout for voice mode to prevent long waits
-      const timeoutMs = isVoice ? 12000 : 30000 // 12s for voice, 30s for text
+      // Text path – more generous timeout
+      const timeoutMs = 30000 // 30s for text
       
       const agentResult = await Promise.race([
         runLangGraphAgent({
           question,
           userId,
           apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
-          isVoice,
           agentId,
           currentPage,
         }),
@@ -130,125 +257,6 @@ export async function POST(req: Request) {
     if (!answer || typeof answer !== "string" || answer.trim().length === 0) {
       console.error("[agent] Answer validation failed, using emergency fallback")
       answer = "I'm sorry, I'm having trouble right now. Could you please try again?"
-    }
-    
-    // Clean up answer for voice mode - remove markdown and ensure it's speakable
-    if (isVoice) {
-      // Remove markdown formatting that might break TTS
-      answer = answer
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-        .replace(/\*(.*?)\*/g, '$1') // Remove italic
-        .replace(/`(.*?)`/g, '$1') // Remove code
-        .replace(/#{1,6}\s+/g, '') // Remove headers
-        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links
-        .replace(/\n{3,}/g, '. ') // Convert multiple newlines to periods
-        .replace(/\n/g, '. ') // Convert single newlines to periods
-        .replace(/\.{2,}/g, '.') // Normalize multiple periods
-        .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
-        // Replace problematic Unicode characters
-        .replace(/[\u2013\u2014\u2015]/g, '-') // Replace em/en dashes
-        .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes
-        .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
-        .replace(/[\u2026]/g, '...') // Replace ellipsis
-        .trim()
-      
-      // Remove any remaining special characters that might break TTS
-      answer = answer
-        .replace(/[^\x00-\x7F]/g, '') // Remove all non-ASCII characters
-        .replace(/\s+/g, ' ') // Normalize spaces
-        .trim()
-      
-      // Ensure minimum length for voice
-      if (answer.length < 10) {
-        answer = "I understand. " + answer
-      }
-      
-      // Ensure it ends with proper punctuation
-      if (!/[.!?]$/.test(answer)) {
-        answer = answer + "."
-      }
-      
-      console.log(`[agent] Voice answer cleaned, final length: ${answer.length}`)
-      console.log(`[agent] Voice answer preview: ${answer.substring(0, 200)}`)
-      
-      // Final validation for voice - ensure it's a valid string
-      if (!answer || answer.length === 0) {
-        console.error("[agent] Voice answer is empty after cleaning, using fallback")
-        answer = "I'm sorry, I couldn't generate a response. Please try again."
-      }
-    }
-
-    // Detect if this is a Vapi request
-    // Vapi API Request tool sends: { question, userId, ... } or { message: { toolCalls: [...] } }
-    const isVapiRequest = !!(
-      body.message?.toolCalls || 
-      toolCall || 
-      body.toolCallId ||
-      body.function?.name || // Custom tool format
-      (body.question && !body.agentId) // Has question but no agentId (likely Vapi)
-    )
-    
-    console.log("[agent] Response format check:", {
-      isVapiRequest,
-      hasToolCall: !!toolCall,
-      toolCallId: toolCall?.id || body.toolCallId,
-      bodyKeys: Object.keys(body)
-    })
-    
-    // Handle Vapi tool call response format (if request came from Vapi)
-    if (isVapiRequest && toolCall?.id) {
-      // Vapi expects this format for tool calls
-      console.log("[agent] Returning Vapi tool call response format", {
-        toolCallId: toolCall.id,
-        answerLength: answer.length,
-        answerPreview: answer.substring(0, 100)
-      })
-      return NextResponse.json({
-        results: [
-          {
-            toolCallId: toolCall.id,
-            result: answer
-          }
-        ]
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        }
-      })
-    } else if (isVapiRequest && body.toolCallId) {
-      // Alternative Vapi format
-      console.log("[agent] Returning Vapi alternative format", {
-        toolCallId: body.toolCallId,
-        answerLength: answer.length
-      })
-      return NextResponse.json({
-        results: [
-          {
-            toolCallId: body.toolCallId,
-            result: answer
-          }
-        ]
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        }
-      })
-    } else if (isVapiRequest) {
-      // Vapi request but no toolCallId - return just the result
-      // This handles API Request tool format
-      console.log("[agent] Returning Vapi API Request format", {
-        answerLength: answer.length
-      })
-      return NextResponse.json({
-        result: answer
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        }
-      })
     }
 
     // Standard API response format (for Next.js chat interface)
