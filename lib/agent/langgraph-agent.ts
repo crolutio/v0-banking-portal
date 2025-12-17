@@ -1,4 +1,4 @@
-import { StateGraph, END, START } from "@langchain/langgraph"
+import { StateGraph, END, START, Annotation } from "@langchain/langgraph"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import {
   getAccountsOverview,
@@ -564,7 +564,22 @@ ${state.isVoice ? "- Provide a SHORT, concise answer (1-3 sentences maximum) for
 
 // Create the LangGraph workflow with AGENT BEHAVIOR + DATA CACHING
 function createAgentGraph() {
-  const workflow = new StateGraph<AgentState>({} as any)
+  // Define state schema using Annotation - LangGraph v1.0.5 syntax
+  const StateAnnotation = Annotation.Root({
+    question: Annotation(),
+    userId: Annotation(),
+    agentId: Annotation(),
+    currentPage: Annotation(),
+    isVoice: Annotation(),
+    isHybrid: Annotation(),
+    toolResults: Annotation(),
+    allData: Annotation(),
+    answer: Annotation(),
+    shortAnswer: Annotation(),
+    iteration: Annotation(),
+  })
+  
+  const workflow = new StateGraph(StateAnnotation)
     .addNode("prefetch", prefetchNode) // Pre-fetch all data first
     .addNode("plan", planNode)
     .addNode("fetchAll", async (state: AgentState) => {

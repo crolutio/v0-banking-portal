@@ -106,7 +106,9 @@ export async function POST(req: Request) {
       }
       
       console.log(`[agent] Agent completed successfully, answer length: ${answer?.length || 0}`)
-      console.log(`[agent] Answer preview: ${answer.substring(0, 100)}...`)
+      if (answer && answer.length > 0) {
+        console.log(`[agent] Answer preview: ${answer.substring(0, 100)}...`)
+      }
     } catch (error: any) {
       console.error("[agent] LangGraph agent error:", error)
       console.error("[agent] Error message:", error?.message)
@@ -115,6 +117,10 @@ export async function POST(req: Request) {
       // Return a user-friendly error message that won't break Vapi
       if (error?.message?.includes("timeout")) {
         answer = "I'm taking a bit longer than usual. Please try asking again."
+      } else if (error?.message?.includes("StateGraph") || error?.message?.includes("Annotation")) {
+        // LangGraph initialization error - use a simple fallback
+        console.error("[agent] LangGraph initialization error, using simple response")
+        answer = "Hello! I'm here to help with your banking questions. What would you like to know?"
       } else {
         answer = "I'm sorry, I encountered an error processing your request. Please try again."
       }
