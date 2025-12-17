@@ -587,16 +587,16 @@ function createAgentGraph() {
       const allData = await executeTool("fetchAllData", { userId: state.userId }, state.userId)
       return { allData, iteration: state.iteration + 1 }
     })
-    .addNode("answer", answerNode)
+    .addNode("generateAnswer", answerNode) // Renamed from "answer" to avoid conflict with state attribute
     .addEdge(START, "prefetch") // Start with pre-fetch
     .addEdge("prefetch", "plan") // Then plan with data available
     // CONDITIONAL EDGE: Agent decides what to do next
     .addConditionalEdges("plan", shouldContinueNode, {
       continue: "fetchAll",
-      answer: "answer",
+      answer: "generateAnswer",
     })
-    .addEdge("fetchAll", "answer")
-    .addEdge("answer", END)
+    .addEdge("fetchAll", "generateAnswer")
+    .addEdge("generateAnswer", END)
 
   return workflow.compile()
 }
