@@ -135,7 +135,16 @@ export async function POST(req: Request) {
         .replace(/`(.*?)`/g, '$1') // Remove code
         .replace(/#{1,6}\s+/g, '') // Remove headers
         .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links
-        .replace(/\n{3,}/g, '\n\n') // Normalize line breaks
+        .replace(/\n{3,}/g, '. ') // Convert multiple newlines to periods
+        .replace(/\n/g, '. ') // Convert single newlines to periods
+        .replace(/\.{2,}/g, '.') // Normalize multiple periods
+        .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
+        .trim()
+      
+      // Remove any remaining special characters that might break TTS
+      answer = answer
+        .replace(/[^\w\s.,!?;:()'-]/g, '') // Remove special chars except common punctuation
+        .replace(/\s+/g, ' ') // Normalize spaces
         .trim()
       
       // Ensure minimum length for voice
@@ -143,7 +152,13 @@ export async function POST(req: Request) {
         answer = "I understand. " + answer
       }
       
+      // Ensure it ends with proper punctuation
+      if (!/[.!?]$/.test(answer)) {
+        answer = answer + "."
+      }
+      
       console.log(`[agent] Voice answer cleaned, final length: ${answer.length}`)
+      console.log(`[agent] Voice answer preview: ${answer.substring(0, 200)}`)
     }
 
     // Detect if this is a Vapi request

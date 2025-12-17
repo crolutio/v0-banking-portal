@@ -587,10 +587,34 @@ export function FloatingChatBubble() {
           }
           
           // Use Vapi's voice API to speak the answer
-          // Since Vapi doesn't have standalone TTS, we'll use their voice call API
-          // For now, we'll use browser TTS as it works well and sounds good
-          // In the future, we could create a Vapi assistant specifically for TTS
+          // Try Vapi TTS API first, fallback to browser TTS
+          const vapiTtsAssistantId = process.env.NEXT_PUBLIC_VAPI_TTS_ASSISTANT_ID
           
+          if (vapiTtsAssistantId) {
+            try {
+              // Use Vapi's API to speak the text
+              const ttsResponse = await fetch("/api/vapi-tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                  text: shortAnswer,
+                  assistantId: vapiTtsAssistantId 
+                }),
+              })
+              
+              if (ttsResponse.ok) {
+                const result = await ttsResponse.json()
+                console.log("[Voice Assist] Speaking via Vapi API:", result.callId)
+                return // Successfully initiated Vapi call
+              } else {
+                console.warn("[Voice Assist] Vapi TTS failed, falling back to browser TTS")
+              }
+            } catch (error) {
+              console.error("[Voice Assist] Vapi TTS error, falling back to browser TTS:", error)
+            }
+          }
+          
+          // Fallback to browser TTS
           if ('speechSynthesis' in window) {
             // Stop any ongoing speech
             speechSynthesis.cancel()
