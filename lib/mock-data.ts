@@ -20,12 +20,12 @@ import type {
 // Users
 export const users: User[] = [
   {
-    id: "11111111-1111-1111-1111-111111111111",
+    id: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Sarah Chen",
     email: "sarah.chen@email.com",
     role: "retail_customer",
     avatar: "/professional-woman-portrait.png",
-    rmId: "66666666-6666-6666-6666-666666666666",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     segment: "Premium",
     kycStatus: "Verified",
     createdAt: "2022-03-15",
@@ -36,13 +36,13 @@ export const users: User[] = [
     email: "mohammed.ali@email.com",
     role: "retail_customer",
     avatar: "/professional-man-portrait.png",
-    rmId: "66666666-6666-6666-6666-666666666666",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     segment: "Premium",
     kycStatus: "Verified",
     createdAt: "2021-08-22",
   },
   {
-    id: "55555555-5555-5555-5555-555555555555",
+    id: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     name: "Fatima Hassan",
     email: "fatima.hassan@email.com",
     role: "sme_customer",
@@ -53,7 +53,7 @@ export const users: User[] = [
     createdAt: "2023-01-10",
   },
   {
-    id: "66666666-6666-6666-6666-666666666666",
+    id: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     name: "James Rodriguez",
     email: "james.rm@bank.com",
     role: "relationship_manager",
@@ -61,7 +61,7 @@ export const users: User[] = [
     createdAt: "2020-06-01",
   },
   {
-    id: "88888888-8888-8888-8888-888888888888",
+    id: "2be06428-7933-41f5-a426-f27478e75c1c",
     name: "David Kim",
     email: "david.risk@bank.com",
     role: "risk_compliance",
@@ -69,7 +69,7 @@ export const users: User[] = [
     createdAt: "2019-11-15",
   },
   {
-    id: "99999999-9999-9999-9999-999999999999",
+    id: "730b0c66-1feb-432a-9718-e3a9755eea7b",
     name: "System Administrator",
     email: "admin@bank.com",
     role: "admin",
@@ -82,7 +82,7 @@ export const users: User[] = [
 export const accounts: Account[] = [
   {
     id: "acc_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Primary Current Account",
     type: "current",
     currency: "AED",
@@ -94,7 +94,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_2",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Savings Account",
     type: "savings",
     currency: "AED",
@@ -106,7 +106,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_3",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "USD Wallet",
     type: "fx_wallet",
     currency: "USD",
@@ -117,7 +117,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_4",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     name: "VIP Current Account",
     type: "current",
     currency: "AED",
@@ -129,7 +129,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_5",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     name: "Investment Savings",
     type: "savings",
     currency: "AED",
@@ -140,7 +140,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_6",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     name: "Business Operating Account",
     type: "business",
     currency: "AED",
@@ -152,7 +152,7 @@ export const accounts: Account[] = [
   },
   {
     id: "acc_7",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     name: "Business Savings",
     type: "savings",
     currency: "AED",
@@ -246,7 +246,7 @@ export const transactions: Transaction[] = [
 export const cards: Card[] = [
   {
     id: "card_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     accountId: "acc_1",
     type: "debit",
     brand: "Visa",
@@ -257,7 +257,7 @@ export const cards: Card[] = [
   },
   {
     id: "card_2",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     accountId: "acc_1",
     type: "credit",
     brand: "Mastercard",
@@ -270,7 +270,7 @@ export const cards: Card[] = [
   },
   {
     id: "card_3",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     accountId: "acc_1",
     type: "virtual",
     brand: "Visa",
@@ -283,7 +283,7 @@ export const cards: Card[] = [
   },
   {
     id: "card_4",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     accountId: "acc_4",
     type: "credit",
     brand: "Visa",
@@ -296,7 +296,7 @@ export const cards: Card[] = [
   },
   {
     id: "card_5",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     accountId: "acc_6",
     type: "debit",
     brand: "Mastercard",
@@ -363,7 +363,7 @@ export const loanOffers: LoanOffer[] = [
 export const loans: Loan[] = [
   {
     id: "loan_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     type: "personal",
     amount: 50000,
     remainingBalance: 32500,
@@ -375,7 +375,7 @@ export const loans: Loan[] = [
   },
   {
     id: "loan_2",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     type: "mortgage",
     amount: 2500000,
     remainingBalance: 2150000,
@@ -387,7 +387,7 @@ export const loans: Loan[] = [
   },
   {
     id: "loan_3",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     type: "credit_line",
     amount: 500000,
     remainingBalance: 325000,
@@ -403,7 +403,7 @@ export const loans: Loan[] = [
 export const portfolioHoldings: PortfolioHolding[] = [
   {
     id: "hold_1",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     symbol: "AAPL",
     name: "Apple Inc.",
     type: "stock",
@@ -416,7 +416,7 @@ export const portfolioHoldings: PortfolioHolding[] = [
   },
   {
     id: "hold_2",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     symbol: "MSFT",
     name: "Microsoft Corporation",
     type: "stock",
@@ -429,7 +429,7 @@ export const portfolioHoldings: PortfolioHolding[] = [
   },
   {
     id: "hold_3",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     symbol: "VTI",
     name: "Vanguard Total Stock Market ETF",
     type: "etf",
@@ -442,7 +442,7 @@ export const portfolioHoldings: PortfolioHolding[] = [
   },
   {
     id: "hold_4",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     symbol: "BND",
     name: "Vanguard Total Bond Market ETF",
     type: "bond",
@@ -597,18 +597,18 @@ export const productTerms: ProductTerms[] = [
 export const riskAlerts: RiskAlert[] = [
   {
     id: "alert_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     type: "unusual_activity",
     severity: "medium",
     title: "Unusual spending pattern detected",
     description: "Multiple high-value transactions in different countries within 24 hours",
     status: "investigating",
     createdAt: "2024-12-18T14:30:00Z",
-    assignedTo: "user_risk_1",
+    assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
   },
   {
     id: "alert_2",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     type: "aml",
     severity: "high",
     title: "Large cash deposits flagged",
@@ -627,14 +627,14 @@ export const riskAlerts: RiskAlert[] = [
   },
   {
     id: "alert_4",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     type: "fraud",
     severity: "critical",
     title: "Potential account takeover attempt",
     description: "Multiple failed login attempts followed by password reset from new device",
     status: "escalated",
     createdAt: "2024-12-15T16:45:00Z",
-    assignedTo: "user_risk_1",
+    assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
   },
   {
     id: "alert_5",
@@ -647,7 +647,7 @@ export const riskAlerts: RiskAlert[] = [
   },
   {
     id: "alert_6",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     type: "unusual_activity",
     severity: "low",
     title: "First international transfer",
@@ -663,11 +663,11 @@ export const riskAlerts: RiskAlert[] = [
     description: "Beneficiary name matches sanctions list entry - requires review",
     status: "investigating",
     createdAt: "2024-12-12T08:00:00Z",
-    assignedTo: "user_risk_1",
+    assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
   },
   {
     id: "alert_8",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     type: "fraud",
     severity: "medium",
     title: "Unusual payroll pattern",
@@ -686,7 +686,7 @@ export const riskAlerts: RiskAlert[] = [
   },
   {
     id: "alert_10",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     type: "unusual_activity",
     severity: "medium",
     title: "Dormant account reactivation",
@@ -711,7 +711,7 @@ export const riskAlerts: RiskAlert[] = [
     description: "Multiple transactions just below reporting threshold",
     status: "escalated",
     createdAt: "2024-12-07T14:00:00Z",
-    assignedTo: "user_risk_1",
+    assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
   },
 ]
 
@@ -719,7 +719,7 @@ export const riskAlerts: RiskAlert[] = [
 export const auditEvents: AuditEvent[] = [
   {
     id: "audit_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     userRole: "retail_customer",
     action: "AI query: Account balance inquiry",
     actionType: "ai_response",
@@ -733,7 +733,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_2",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     userRole: "retail_customer",
     action: "Transfer initiated",
     actionType: "transfer",
@@ -746,7 +746,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_3",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     userRole: "retail_customer",
     action: "Dispute filed",
     actionType: "dispute",
@@ -760,7 +760,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_4",
-    userId: "user_rm_1",
+    userId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     userRole: "relationship_manager",
     action: "AI query: Client portfolio summary",
     actionType: "ai_response",
@@ -773,7 +773,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_5",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     userRole: "retail_customer",
     action: "Loan application started",
     actionType: "loan_application",
@@ -787,7 +787,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_6",
-    userId: "user_risk_1",
+    userId: "2be06428-7933-41f5-a426-f27478e75c1c",
     userRole: "risk_compliance",
     action: "Alert investigation",
     actionType: "ai_response",
@@ -800,7 +800,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_7",
-    userId: "user_admin_1",
+    userId: "730b0c66-1feb-432a-9718-e3a9755eea7b",
     userRole: "admin",
     action: "Policy update",
     actionType: "policy_change",
@@ -813,7 +813,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_8",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     userRole: "retail_customer",
     action: "Card frozen",
     actionType: "card_action",
@@ -826,7 +826,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_9",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     userRole: "sme_customer",
     action: "AI query: Fee explanation",
     actionType: "ai_response",
@@ -840,7 +840,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_10",
-    userId: "user_rm_1",
+    userId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     userRole: "relationship_manager",
     action: "Client meeting logged",
     actionType: "ai_response",
@@ -853,7 +853,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_11",
-    userId: "user_admin_1",
+    userId: "730b0c66-1feb-432a-9718-e3a9755eea7b",
     userRole: "admin",
     action: "Permission change",
     actionType: "policy_change",
@@ -866,7 +866,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_12",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     userRole: "retail_customer",
     action: "Login",
     actionType: "login",
@@ -879,7 +879,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_13",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     userRole: "retail_customer",
     action: "AI query: Investment explanation",
     actionType: "ai_response",
@@ -893,7 +893,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_14",
-    userId: "user_risk_1",
+    userId: "2be06428-7933-41f5-a426-f27478e75c1c",
     userRole: "risk_compliance",
     action: "Case resolved",
     actionType: "ai_response",
@@ -906,7 +906,7 @@ export const auditEvents: AuditEvent[] = [
   },
   {
     id: "audit_15",
-    userId: "user_sme_1",
+    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     userRole: "sme_customer",
     action: "Bulk payment initiated",
     actionType: "transfer",
@@ -923,16 +923,16 @@ export const auditEvents: AuditEvent[] = [
 export const clientInteractions: ClientInteraction[] = [
   {
     id: "interaction_1",
-    clientId: "user_retail_1",
-    rmId: "user_rm_1",
+    clientId: "4e140685-8f38-49ff-aae0-d6109c46873d",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     type: "meeting",
     summary: "Quarterly portfolio review. Discussed investment options and savings goals.",
     date: "2024-12-10T10:00:00Z",
   },
   {
     id: "interaction_2",
-    clientId: "user_retail_1",
-    rmId: "user_rm_1",
+    clientId: "4e140685-8f38-49ff-aae0-d6109c46873d",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     type: "call",
     summary: "Follow-up on loan application status. Customer satisfied with progress.",
     date: "2024-12-15T14:30:00Z",
@@ -940,7 +940,7 @@ export const clientInteractions: ClientInteraction[] = [
   {
     id: "interaction_3",
     clientId: "user_retail_2",
-    rmId: "user_rm_1",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     type: "email",
     summary: "Sent VIP benefits summary and exclusive investment opportunities.",
     date: "2024-12-12T09:00:00Z",
@@ -948,15 +948,15 @@ export const clientInteractions: ClientInteraction[] = [
   {
     id: "interaction_4",
     clientId: "user_retail_2",
-    rmId: "user_rm_1",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     type: "meeting",
     summary: "Wealth planning session. Discussed estate planning and trust services.",
     date: "2024-12-05T11:00:00Z",
   },
   {
     id: "interaction_5",
-    clientId: "user_sme_1",
-    rmId: "user_rm_1",
+    clientId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
+    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     type: "call",
     summary: "Discussed credit line increase for business expansion.",
     date: "2024-12-08T16:00:00Z",
@@ -967,7 +967,7 @@ export const clientInteractions: ClientInteraction[] = [
 export const nextBestActions: NextBestAction[] = [
   {
     id: "nba_1",
-    clientId: "user_retail_1",
+    clientId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     action: "Offer premium credit card upgrade",
     reason: "High spending pattern qualifies for Platinum card benefits",
     priority: "high",
@@ -975,7 +975,7 @@ export const nextBestActions: NextBestAction[] = [
   },
   {
     id: "nba_2",
-    clientId: "user_retail_1",
+    clientId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     action: "Schedule savings goal review",
     reason: "Approaching target date for travel savings goal",
     priority: "medium",
@@ -998,7 +998,7 @@ export const nextBestActions: NextBestAction[] = [
   },
   {
     id: "nba_5",
-    clientId: "user_sme_1",
+    clientId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
     action: "Propose business insurance",
     reason: "Growing business with no liability coverage",
     priority: "medium",
@@ -1010,7 +1010,7 @@ export const nextBestActions: NextBestAction[] = [
 export const supportTickets: SupportTicket[] = [
   {
     id: "ticket_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     subject: "Unable to add new beneficiary",
     status: "in_progress",
     priority: "medium",
@@ -1041,7 +1041,7 @@ export const supportTickets: SupportTicket[] = [
   },
   {
     id: "ticket_2",
-    userId: "user_retail_2",
+    userId: "22222222-2222-2222-2222-222222222222",
     subject: "Question about investment fees",
     status: "resolved",
     priority: "low",
@@ -1069,7 +1069,7 @@ export const supportTickets: SupportTicket[] = [
 export const savingsGoals: SavingsGoal[] = [
   {
     id: "goal_1",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Dream Vacation to Maldives",
     category: "travel",
     targetAmount: 25000,
@@ -1085,7 +1085,7 @@ export const savingsGoals: SavingsGoal[] = [
   },
   {
     id: "goal_2",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "New MacBook Pro",
     category: "shopping",
     targetAmount: 12000,
@@ -1101,7 +1101,7 @@ export const savingsGoals: SavingsGoal[] = [
   },
   {
     id: "goal_3",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Emergency Fund",
     category: "emergency",
     targetAmount: 50000,
@@ -1117,7 +1117,7 @@ export const savingsGoals: SavingsGoal[] = [
   },
   {
     id: "goal_4",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Home Down Payment",
     category: "home",
     targetAmount: 200000,
@@ -1133,7 +1133,7 @@ export const savingsGoals: SavingsGoal[] = [
   },
   {
     id: "goal_5",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "iPhone 16 Pro Max",
     category: "shopping",
     targetAmount: 6500,
@@ -1149,7 +1149,7 @@ export const savingsGoals: SavingsGoal[] = [
   },
   {
     id: "goal_6",
-    userId: "user_retail_1",
+    userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
     name: "Wedding Fund",
     category: "wedding",
     targetAmount: 150000,

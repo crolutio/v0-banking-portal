@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     let model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
     // Default to Sarah Chen for demo if no user provided
-    const userId = requestedUserId || "11111111-1111-1111-1111-111111111111"
+    const userId = requestedUserId || "4e140685-8f38-49ff-aae0-d6109c46873d"
     
     console.log(`[AI Chat] Fetching data for user: ${userId}`)
 

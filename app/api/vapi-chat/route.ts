@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
     // Default demo user if none provided
-    const userId = requestedUserId || "11111111-1111-1111-1111-111111111111"
+    const userId = requestedUserId || "4e140685-8f38-49ff-aae0-d6109c46873d" // Sarah Chen
 
     // --- Fetch core financial data (simplified subset of /api/chat) ---
     const accounts = await fetchData("accounts", userId)

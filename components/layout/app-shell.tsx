@@ -141,21 +141,27 @@ function ThemeToggle() {
 function RoleSwitcher() {
   const { currentRole, currentUser, setRole, availableRoles } = useRole()
 
+  if (!currentUser) {
+    return null
+  }
+
+  const userInitials = currentUser.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("") || "U"
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 px-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={currentUser.avatar || "/placeholder.svg"} alt={currentUser.name} />
+            <AvatarImage src="/placeholder.svg" alt={currentUser.name || "User"} />
             <AvatarFallback className="bg-primary/20 text-primary text-xs">
-              {currentUser.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
+              {userInitials}
             </AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col items-start">
-            <span className="text-sm font-medium text-foreground">{currentUser.name}</span>
+            <span className="text-sm font-medium text-foreground">{currentUser.name || "User"}</span>
             <span className="text-xs text-muted-foreground capitalize">{currentRole.replace("_", " ")}</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -164,28 +170,32 @@ function RoleSwitcher() {
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {availableRoles.map(({ role, label, user }) => (
-          <DropdownMenuItem 
-            key={role} 
-            onClick={() => setRole(role)} 
-            className="flex items-center gap-3 py-2 focus:bg-accent/50 dark:focus:bg-accent/20"
-          >
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-              <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                {user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{label}</p>
-            </div>
-            {currentRole === role && <Check className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
+        {availableRoles.map(({ role, label, user }) => {
+          const initials = user.name
+            ?.split(" ")
+            .map((n) => n[0])
+            .join("") || "U"
+          
+          return (
+            <DropdownMenuItem 
+              key={role} 
+              onClick={() => setRole(role)} 
+              className="flex items-center gap-3 py-2 focus:bg-accent/50 dark:focus:bg-accent/20"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="/placeholder.svg" alt={user.name} />
+                <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+              </div>
+              {currentRole === role && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -258,6 +258,31 @@ export interface SupportMessage {
   citations?: Citation[]
 }
 
+// Database Types for Support Conversations
+export type DbConversation = {
+  id: string;
+  customer_id: string;
+  subject: string | null;
+  channel: string;
+  status: string;
+  priority: string;
+  assigned_agent_id: string | null;
+  last_message: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbMessage = {
+  id: string;
+  conversation_id: string;
+  sender_type: "customer" | "agent";
+  sender_customer_id: string | null;
+  sender_agent_id: string | null;
+  content: string;
+  is_internal: boolean;
+  created_at: string;
+};
+
 // Savings Goal Types
 export type SavingsGoalCategory =
   | "travel"

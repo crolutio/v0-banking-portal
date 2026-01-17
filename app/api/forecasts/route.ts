@@ -5,7 +5,7 @@ import { Transaction } from "@/lib/types"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get("userId") || "11111111-1111-1111-1111-111111111111"
+  const userId = searchParams.get("userId") || "4e140685-8f38-49ff-aae0-d6109c46873d" // Sarah Chen
 
   const supabase = createDirectClient()
 

@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     
     // Map Vapi placeholders to actual user ID
     if (requestedUserId === "me" || requestedUserId === "user" || !requestedUserId) {
-      requestedUserId = "11111111-1111-1111-1111-111111111111"
+      requestedUserId = "4e140685-8f38-49ff-aae0-d6109c46873d" // Sarah Chen
     }
     
     // Also check tool call args for userId

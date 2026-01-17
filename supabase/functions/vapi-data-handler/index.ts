@@ -432,7 +432,7 @@ Deno.serve(async (req: Request) => {
     const userId = body.userId || 
                    body.user?.id || 
                    body.variables?.userId ||
-                   "11111111-1111-1111-1111-111111111111"
+                   "4e140685-8f38-49ff-aae0-d6109c46873d" // Sarah Chen
 
     console.log("[vapi-data-handler] Processing:", { userMessage, userId })
 
