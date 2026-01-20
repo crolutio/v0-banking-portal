@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import type { UserRole, User } from "./types"
+import { CUSTOMER_IDS } from "./customer-ids"
 import { users } from "./mock-data"
 
 interface RoleContextType {
@@ -13,11 +14,11 @@ interface RoleContextType {
 }
 
 const bankingRoleUserMap: Record<UserRole, string> = {
-  retail_customer: "11111111-1111-1111-1111-111111111111",
-  sme_customer: "55555555-5555-5555-5555-555555555555",
-  relationship_manager: "66666666-6666-6666-6666-666666666666",
-  risk_compliance: "88888888-8888-8888-8888-888888888888",
-  admin: "99999999-9999-9999-9999-999999999999",
+  retail_customer: CUSTOMER_IDS["Sarah Chen"],
+  sme_customer: CUSTOMER_IDS["Fatima Hassan"],
+  relationship_manager: CUSTOMER_IDS["James Rodriguez"],
+  risk_compliance: CUSTOMER_IDS["David Kim"],
+  admin: CUSTOMER_IDS["System Administrator"],
 }
 
 const callCenterRoleUserMap: Record<UserRole, string> = {

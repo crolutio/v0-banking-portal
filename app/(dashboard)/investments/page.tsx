@@ -110,9 +110,9 @@ export default function InvestmentsPage() {
       const supabase = createClient()
 
       const { data, error } = await supabase
-        .from("portfolio_holdings")
+        .from("portfolio_holdings_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (error) {
         console.error("Error fetching holdings:", error)
@@ -128,7 +128,7 @@ export default function InvestmentsPage() {
 
           return {
             id: h.id,
-            userId: h.user_id,
+            userId: h.customer_id,
             symbol: h.symbol,
             name: h.name,
             type: h.type,

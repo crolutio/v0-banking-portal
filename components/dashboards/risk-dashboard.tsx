@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShieldAlert, AlertTriangle, CheckCircle, Clock, ArrowRight, FileWarning, Activity, Loader2 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { riskAlerts as mockRiskAlerts, auditEvents as mockAuditEvents } from "@/lib/mock-data"
 import { RiskAlert, AuditEvent } from "@/lib/types"
 
 export function RiskDashboard() {
@@ -20,54 +20,8 @@ export function RiskDashboard() {
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true)
-      const supabase = createClient()
-
-      // Fetch Risk Alerts
-      const { data: alertsData, error: alertsError } = await supabase
-        .from("risk_alerts")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20)
-
-      if (alertsError) console.error("Error fetching risk alerts:", alertsError)
-
-      if (alertsData) {
-        setAlerts(alertsData.map((a: any) => ({
-          id: a.id,
-          userId: a.user_id,
-          type: a.type,
-          severity: a.severity,
-          title: a.title,
-          description: a.description,
-          status: a.status,
-          createdAt: a.created_at,
-          assignedTo: a.assigned_to_id
-        })))
-      }
-
-      // Fetch Audit Logs
-      const { data: logsData, error: logsError } = await supabase
-        .from("audit_logs")
-        .select("*")
-        .order("timestamp", { ascending: false })
-        .limit(5)
-
-      if (logsError) console.error("Error fetching audit logs:", logsError)
-
-      if (logsData) {
-        setAuditLogs(logsData.map((l: any) => ({
-          id: l.id,
-          userId: l.user_id,
-          userRole: l.user_role,
-          action: l.action,
-          actionType: l.action_type,
-          timestamp: l.timestamp,
-          details: l.details,
-          sourcesAccessed: l.sources_accessed || [],
-          redactions: l.redactions || [],
-          riskFlags: l.risk_flags || []
-        })))
-      }
+      setAlerts(mockRiskAlerts)
+      setAuditLogs(mockAuditEvents)
 
       setIsLoading(false)
     }

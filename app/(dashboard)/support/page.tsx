@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -146,6 +147,120 @@ export default function SupportPage() {
     high: "text-red-600",
   }
 
+  const renderInlineMarkdown = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`|\[.*?\]\(.*?\)|\n)/g)
+    return parts.map((part, idx) => {
+      if (part === "\n") return <br key={idx} />
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={idx} className="font-semibold">
+            {part.slice(2, -2)}
+          </strong>
+        )
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={idx} className="rounded bg-muted px-1 py-0.5 text-xs">
+            {part.slice(1, -1)}
+          </code>
+        )
+      }
+      const linkMatch = part.match(/^\[(.+)\]\((.+)\)$/)
+      if (linkMatch) {
+        const [, label, href] = linkMatch
+        return (
+          <a key={idx} href={href} className="text-primary underline" target="_blank" rel="noreferrer">
+            {label}
+          </a>
+        )
+      }
+      return <span key={idx}>{part}</span>
+    })
+  }
+
+  const parseMarkdownTable = (lines: string[]) => {
+    if (lines.length < 2) return null
+    const headerLine = lines[0].trim()
+    const headers = headerLine
+      .split("|")
+      .map((h) => h.trim())
+      .filter((h) => h.length > 0)
+    if (headers.length === 0) return null
+    const dataLines = lines.slice(1).filter((line) => !/^[\|\s\-:]+$/.test(line.trim()))
+    const rows = dataLines.map((line) => {
+      const cells = line
+        .trim()
+        .split("|")
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0)
+      const normalized = [...cells]
+      while (normalized.length < headers.length) normalized.push("")
+      return normalized.slice(0, headers.length)
+    })
+    if (rows.length === 0) return null
+    return { headers, rows }
+  }
+
+  const renderMessageContent = (content: string) => {
+    const lines = content.split("\n")
+    const blocks: Array<{ type: "text" | "table"; lines: string[] }> = []
+    let current: { type: "text" | "table"; lines: string[] } | null = null
+
+    const isTableLine = (line: string) => {
+      const trimmed = line.trim()
+      return trimmed.startsWith("|") && trimmed.includes("|")
+    }
+
+    for (const line of lines) {
+      const isTable = isTableLine(line)
+      if (!current || current.type !== (isTable ? "table" : "text")) {
+        if (current) blocks.push(current)
+        current = { type: isTable ? "table" : "text", lines: [line] }
+      } else {
+        current.lines.push(line)
+      }
+    }
+    if (current) blocks.push(current)
+
+    return (
+      <div className="space-y-3">
+        {blocks.map((block, idx) => {
+          if (block.type === "table") {
+            const table = parseMarkdownTable(block.lines.filter((l) => l.trim().length > 0))
+            if (!table) return <div key={idx}>{renderInlineMarkdown(block.lines.join("\n"))}</div>
+            return (
+              <div key={idx} className="overflow-x-auto rounded-lg border bg-background">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {table.headers.map((header) => (
+                        <TableHead key={header}>{header}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {table.rows.map((row, rowIdx) => (
+                      <TableRow key={rowIdx}>
+                        {row.map((cell, cellIdx) => (
+                          <TableCell key={cellIdx}>{cell || "\u00A0"}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          }
+          return (
+            <div key={idx} className="text-sm whitespace-pre-wrap">
+              {renderInlineMarkdown(block.lines.join("\n"))}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   // AI Banker questions relevant to support page
   const aiQuestions = [
     "How do I dispute a transaction?",
@@ -272,7 +387,7 @@ export default function SupportPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main content area - Support Interface - 3 columns */}
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[800px]">
             {/* Ticket List */}
             <Card className="lg:col-span-1 flex flex-col">
               <CardHeader className="pb-3">
@@ -308,7 +423,7 @@ export default function SupportPage() {
             </Card>
 
             {/* Chat Window */}
-            <Card className="lg:col-span-2 flex flex-col">
+            <Card className="lg:col-span-2 flex flex-col min-h-0">
               {selectedConversation ? (
                 <>
                   <CardHeader className="pb-3 border-b">
@@ -326,50 +441,52 @@ export default function SupportPage() {
                     </div>
                   </CardHeader>
 
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {messages.map((m) => {
-                        const isUser = m.sender_type === "customer"
-                        return (
-                          <div
-                            key={m.id}
-                            className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
-                          >
-                            {!isUser && (
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                <Headphones className="h-4 w-4" />
-                              </div>
-                            )}
-
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <ScrollArea className="h-full p-4">
+                      <div className="space-y-4">
+                        {messages.map((m) => {
+                          const isUser = m.sender_type === "customer"
+                          return (
                             <div
-                              className={`max-w-[80%] space-y-2 ${isUser ? "items-end" : "items-start"}`}
+                              key={m.id}
+                              className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                             >
+                              {!isUser && (
+                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Headphones className="h-4 w-4" />
+                                </div>
+                              )}
+
                               <div
-                                className={`rounded-2xl px-4 py-3 ${
-                                  isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-                                }`}
+                                className={`max-w-[80%] space-y-2 ${isUser ? "items-end" : "items-start"}`}
                               >
-                                <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                                <div
+                                  className={`rounded-2xl px-4 py-3 ${
+                                    isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                                  }`}
+                                >
+                                  {renderMessageContent(m.content)}
+                                </div>
+
+                                <p className="text-xs text-muted-foreground px-1">
+                                  {new Date(m.created_at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
                               </div>
 
-                              <p className="text-xs text-muted-foreground px-1">
-                                {new Date(m.created_at).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </p>
+                              {isUser && (
+                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                  <User className="h-4 w-4" />
+                                </div>
+                              )}
                             </div>
-
-                            {isUser && (
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                <User className="h-4 w-4" />
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </ScrollArea>
+                          )
+                        })}
+                      </div>
+                    </ScrollArea>
+                  </div>
 
                   <div className="p-4 border-t">
                     <div className="flex gap-3">

@@ -75,10 +75,27 @@ export function CustomerDashboard() {
       const supabase = createClient()
 
       // Fetch Accounts
+      // #region agent log
+      if (typeof window !== "undefined") {
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:80",
+            message: "accounts query start",
+            data: { table: "accounts_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run9",
+            hypothesisId: "H",
+          }),
+        }).catch(() => {})
+      }
+      // #endregion
       const { data: accountsData, error: accountsError } = await supabase
-        .from("accounts")
+        .from("accounts_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -117,7 +134,7 @@ export function CustomerDashboard() {
       
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
-        userId: a.user_id,
+        userId: a.customer_id,
         name: a.name,
         type: a.type,
         currency: a.currency,
@@ -133,6 +150,23 @@ export function CustomerDashboard() {
       // Fetch Transactions (for all accounts)
       if (mappedAccounts.length > 0) {
         const accountIds = mappedAccounts.map(a => a.id)
+        // #region agent log
+        if (typeof window !== "undefined") {
+          fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: "customer-dashboard.tsx:138",
+              message: "transactions query start",
+              data: { table: "transactions_v2", filterColumn: "account_id", accountIdCount: accountIds.length },
+              timestamp: Date.now(),
+              sessionId: "debug-session",
+              runId: "run9",
+              hypothesisId: "H",
+            }),
+          }).catch(() => {})
+        }
+        // #endregion
         const { data: txData, error: txError } = await supabase
           .from("transactions")
           .select("*")
@@ -174,10 +208,27 @@ export function CustomerDashboard() {
       }
 
       // Fetch Cards
+      // #region agent log
+      if (typeof window !== "undefined") {
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:191",
+            message: "cards query start",
+            data: { table: "cards_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run9",
+            hypothesisId: "H",
+          }),
+        }).catch(() => {})
+      }
+      // #endregion
       const { data: cardsData, error: cardsError } = await supabase
-        .from("cards")
+        .from("cards_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -214,7 +265,7 @@ export function CustomerDashboard() {
 
       const mappedCards: CardType[] = (cardsData || []).map((c: any) => ({
         id: c.id,
-        userId: c.user_id,
+        userId: c.customer_id,
         accountId: c.account_id,
         type: c.type,
         brand: c.brand,
@@ -229,10 +280,27 @@ export function CustomerDashboard() {
       setCards(mappedCards)
 
       // Fetch Loans
+      // #region agent log
+      if (typeof window !== "undefined") {
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:241",
+            message: "loans query start",
+            data: { table: "loans_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run9",
+            hypothesisId: "H",
+          }),
+        }).catch(() => {})
+      }
+      // #endregion
       const { data: loansData, error: loansError } = await supabase
-        .from("loans")
+        .from("loans_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -269,7 +337,7 @@ export function CustomerDashboard() {
 
       const mappedLoans: Loan[] = (loansData || []).map((l: any) => ({
         id: l.id,
-        userId: l.user_id,
+        userId: l.customer_id,
         type: l.type,
         amount: Number(l.principal_amount),
         remainingBalance: Number(l.remaining_balance),

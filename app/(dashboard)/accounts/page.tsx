@@ -487,9 +487,9 @@ export default function AccountsPage() {
       // Fetch Accounts
       console.log("Fetching accounts for user:", currentBankingUserId)
       const { data: accountsData, error: accountsError } = await supabase
-        .from("accounts")
+        .from("accounts_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -529,7 +529,7 @@ export default function AccountsPage() {
       
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
-        userId: a.user_id,
+        userId: a.customer_id,
         name: a.name,
         type: a.type,
         currency: a.currency,

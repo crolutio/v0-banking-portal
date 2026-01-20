@@ -343,9 +343,9 @@ export default function CardsPage() {
       const supabase = createClient()
 
       const { data, error } = await supabase
-        .from("cards")
+        .from("cards_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -383,7 +383,7 @@ export default function CardsPage() {
       } else {
         const mappedCards: CardType[] = (data || []).map((c: any) => ({
           id: c.id,
-          userId: c.user_id,
+          userId: c.customer_id,
           accountId: c.account_id,
           type: c.type,
           brand: c.brand,

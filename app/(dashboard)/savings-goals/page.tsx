@@ -279,9 +279,9 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
       const supabase = createClient()
       
       const { data, error } = await supabase
-        .from('savings_goals')
+        .from('savings_goals_v2')
         .insert({
-          user_id: currentBankingUserId,
+          customer_id: currentBankingUserId,
           name: customGoal.name,
           category: customGoal.category,
           target_amount: customGoal.targetAmount,
@@ -596,7 +596,7 @@ function AddFundsDialog({
         if (txError) throw txError
 
         // 2. Update goal amount
-        const { error: goalError } = await supabase.from('savings_goals')
+        const { error: goalError } = await supabase.from('savings_goals_v2')
             .update({ current_amount: goal.currentAmount + numericAmount })
             .eq('id', goal.id)
         if (goalError) throw goalError
@@ -607,9 +607,9 @@ function AddFundsDialog({
         // For demo, we'll skip the account deduction to avoid potential sync issues if we don't have an RPC
         // OR we can do it:
         /*
-        const { data: account } = await supabase.from('accounts').select('balance').eq('id', sourceAccountId).single()
+        const { data: account } = await supabase.from('accounts_v2').select('balance').eq('id', sourceAccountId).single()
         if (account) {
-             await supabase.from('accounts').update({ balance: account.balance - numericAmount }).eq('id', sourceAccountId)
+             await supabase.from('accounts_v2').update({ balance: account.balance - numericAmount }).eq('id', sourceAccountId)
         }
         */
        
@@ -714,15 +714,15 @@ export default function SavingsGoalsPage() {
 
       // Fetch Savings Goals
       const { data: goalsData, error: goalsError } = await supabase
-        .from("savings_goals")
+        .from("savings_goals_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (goalsError) console.error("Error fetching savings goals:", goalsError)
 
       const mappedGoals: SavingsGoal[] = (goalsData || []).map((g: any) => ({
         id: g.id,
-        userId: g.user_id,
+        userId: g.customer_id,
         name: g.name,
         category: g.category,
         targetAmount: Number(g.target_amount),
@@ -741,15 +741,15 @@ export default function SavingsGoalsPage() {
 
       // Fetch Accounts (for the dropdown in Create Goal)
       const { data: accountsData, error: accountsError } = await supabase
-        .from("accounts")
+        .from("accounts_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (accountsError) console.error("Error fetching accounts:", accountsError)
 
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
-        userId: a.user_id,
+        userId: a.customer_id,
         name: a.name,
         type: a.type,
         currency: a.currency,
@@ -826,11 +826,11 @@ export default function SavingsGoalsPage() {
         setAddFundsGoal(goal)
         break
       case "pause":
-        await supabase.from('savings_goals').update({ status: 'paused' }).eq('id', goal.id)
+        await supabase.from('savings_goals_v2').update({ status: 'paused' }).eq('id', goal.id)
         setSavingsGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: 'paused' } : g))
         break
       case "resume":
-        await supabase.from('savings_goals').update({ status: 'active' }).eq('id', goal.id)
+        await supabase.from('savings_goals_v2').update({ status: 'active' }).eq('id', goal.id)
         setSavingsGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: 'active' } : g))
         break
       case "edit":

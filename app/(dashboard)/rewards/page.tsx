@@ -48,14 +48,14 @@ export default function RewardsPage() {
 
       // Fetch Profile
       const { data: profileData } = await supabase
-        .from("reward_profiles")
+        .from("reward_profiles_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
         .single()
 
       if (profileData) {
         setProfile({
-          userId: profileData.user_id,
+          userId: profileData.customer_id,
           totalPoints: profileData.total_points,
           lifetimePoints: profileData.lifetime_points,
           tier: profileData.tier,
@@ -93,16 +93,16 @@ export default function RewardsPage() {
 
       // Fetch Activities
       const { data: activityData } = await supabase
-        .from("reward_activities")
+        .from("reward_activities_v2")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
         .order("created_at", { ascending: false })
         .limit(10)
 
       if (activityData) {
         setActivities(activityData.map((act: any) => ({
           id: act.id,
-          userId: act.user_id,
+          userId: act.customer_id,
           amount: act.amount,
           type: act.type,
           category: act.category,
@@ -124,8 +124,8 @@ export default function RewardsPage() {
       const supabase = createClient()
       
       // 1. Create redemption activity
-      const { error: activityError } = await supabase.from("reward_activities").insert({
-        user_id: currentUser?.id,
+      const { error: activityError } = await supabase.from("reward_activities_v2").insert({
+        customer_id: currentUser?.id,
         amount: -item.pointsCost,
         type: "redeemed",
         category: item.category,
@@ -143,9 +143,9 @@ export default function RewardsPage() {
       // Fallback if RPC doesn't exist (update directly)
       if (profileError) {
          await supabase
-          .from("reward_profiles")
+          .from("reward_profiles_v2")
           .update({ total_points: profile.totalPoints - item.pointsCost })
-          .eq("user_id", currentBankingUserId)
+          .eq("customer_id", currentBankingUserId)
       }
 
       // Optimistic update
@@ -154,16 +154,16 @@ export default function RewardsPage() {
       
       // Refresh activities
       const { data: newActivity } = await supabase
-        .from("reward_activities")
+        .from("reward_activities_v2")
         .select("*")
-        .eq("user_id", currentUser?.id)
+        .eq("customer_id", currentUser?.id)
         .order("created_at", { ascending: false })
         .limit(10)
         
       if (newActivity) {
          setActivities(newActivity.map((act: any) => ({
           id: act.id,
-          userId: act.user_id,
+          userId: act.customer_id,
           amount: act.amount,
           type: act.type,
           category: act.category,
