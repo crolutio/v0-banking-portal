@@ -383,10 +383,8 @@ Respond ONLY with valid JSON:
   }
 }
 
-// Decision node: Decide if we need more information or can answer.
-// Note: LangGraph's typed StateType does not line up cleanly with our AgentState,
-// so we accept `any` here to satisfy the `addConditionalEdges` runnable typing.
-function shouldContinueNode(state: any): "continue" | "answer" {
+// Decision node: Decide if we need more information or can answer
+function shouldContinueNode(state: AgentState): "continue" | "answer" {
   // For voice mode with data, always go to answer
   if (state.isVoice && state.allData) {
     return "answer"
