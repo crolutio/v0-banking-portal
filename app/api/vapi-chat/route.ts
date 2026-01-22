@@ -101,15 +101,17 @@ export async function POST(req: Request) {
       0,
     )
 
-    const totalBalance = accounts.reduce(
-      (sum: number, account: any) => sum + toNumber(account.balance),
-      0,
-    )
-    const availableCash = accounts.reduce(
-      (sum: number, account: any) =>
-        sum + toNumber(account.available_balance ?? account.balance),
-      0,
-    )
+    // Convert all balances to AED (USD rate = 3.67)
+    const totalBalance = accounts.reduce((sum: number, account: any) => {
+      const balance = toNumber(account.balance)
+      const rate = account.currency === "USD" ? 3.67 : 1
+      return sum + (balance * rate)
+    }, 0)
+    const availableCash = accounts.reduce((sum: number, account: any) => {
+      const balance = toNumber(account.available_balance ?? account.balance)
+      const rate = account.currency === "USD" ? 3.67 : 1
+      return sum + (balance * rate)
+    }, 0)
 
     const recentTransactions = transactions.slice(0, 10).map((tx: any) => ({
       date: tx.date,
