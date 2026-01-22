@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import {
   Home,
   Wallet,
@@ -318,6 +318,7 @@ function Topbar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <Sidebar className="h-full" onClose={() => setMobileMenuOpen(false)} />
           </SheetContent>
         </Sheet>
