@@ -148,6 +148,7 @@ export async function sendCustomerMessage(args: {
         userId: args.sender_customer_id,
         agentId: "support",
         currentPage: "/support",
+        stream: false,
       }),
     });
 

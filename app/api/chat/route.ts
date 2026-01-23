@@ -53,7 +53,14 @@ async function fetchData(table: string, userId: string, column = "customer_id") 
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId: requestedUserId, agentId, currentPage, voiceAssist } = await req.json()
+    const {
+      messages,
+      userId: requestedUserId,
+      agentId,
+      currentPage,
+      voiceAssist,
+      stream = true,
+    } = await req.json()
     const persona = getAgentPersona(agentId)
     const isHybrid = voiceAssist === true
 
@@ -700,6 +707,12 @@ RESPONSE STYLE:
       }
     }
     
+    if (!stream) {
+      const result = await chat.sendMessage(lastMessage)
+      const text = result.response.text()
+      return new Response(text, { status: 200 })
+    }
+
     // Try primary model first, fallback to secondary on rate limit
     try {
       const result = await chat.sendMessageStream(lastMessage)
