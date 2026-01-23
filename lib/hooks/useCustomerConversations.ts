@@ -11,43 +11,9 @@ export function useCustomerConversations(params: {
   const { customerId } = params;
   const [conversations, setConversations] = useState<DbConversation[]>([]);
   const [loading, setLoading] = useState(true);
-  // #region agent log
-  if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "useCustomerConversations.ts:12",
-        message: "hook entry",
-        data: { customerId, customerIdTruthy: !!customerId, customerIdLength: customerId?.length },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run3",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   async function refresh() {
     if (!customerId) {
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "useCustomerConversations.ts:18",
-            message: "refresh early return - no customerId",
-            data: { customerId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run3",
-            hypothesisId: "A",
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
       setConversations([]);
       setLoading(false);
       return;
@@ -56,53 +22,11 @@ export function useCustomerConversations(params: {
     setLoading(true);
     try {
       const supabase = createCallCenterClient();
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "useCustomerConversations.ts:29",
-            message: "before query",
-            data: { customerId, table: "conversations" },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run3",
-            hypothesisId: "B",
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
       const { data, error } = await supabase
         .from("conversations")
         .select("*")
         .eq("customer_id", customerId)
         .order("updated_at", { ascending: false });
-
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "useCustomerConversations.ts:38",
-            message: "after query",
-            data: {
-              customerId,
-              hasError: !!error,
-              errorString: error ? JSON.stringify(error) : null,
-              errorMessage: error?.message,
-              errorCode: error?.code,
-              dataLength: data?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run3",
-            hypothesisId: "B",
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
 
       if (error) {
         console.error("[useCustomerConversations] fetch error", error);

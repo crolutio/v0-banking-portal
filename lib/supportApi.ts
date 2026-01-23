@@ -7,23 +7,6 @@ const API_BASE =
 const API_BASE_CLEAN = API_BASE.replace(/\/+$/, "");
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  // #region agent log
-  if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "supportApi.ts:6",
-        message: "api() request",
-        data: { apiBase: API_BASE, path, method: init?.method ?? "GET" },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run6",
-        hypothesisId: "D",
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
   const res = await fetch(`${API_BASE_CLEAN}${path}`, {
     ...init,
     headers: {
@@ -34,23 +17,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text();
-    // #region agent log
-    if (typeof window !== "undefined") {
-      fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          location: "supportApi.ts:19",
-          message: "api() error",
-          data: { apiBase: API_BASE, path, status: res.status, textPreview: text.slice(0, 120) },
-          timestamp: Date.now(),
-          sessionId: "debug-session",
-          runId: "run6",
-          hypothesisId: "D",
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
     throw new Error(`API ${res.status}: ${text}`);
   }
   return (await res.json()) as T;

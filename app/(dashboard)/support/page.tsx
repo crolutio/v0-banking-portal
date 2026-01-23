@@ -43,23 +43,6 @@ export default function SupportPage() {
   const { currentUser } = useRole()
   const customerId = currentUser?.id
 
-  // #region agent log
-  if (typeof window !== "undefined") {
-    fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "support/page.tsx:44",
-        message: "SupportPage render",
-        data: { currentUserExists: !!currentUser, customerId },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run3",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {})
-  }
-  // #endregion
   
   const [selectedConversation, setSelectedConversation] = useState<DbConversation | null>(null)
   const [newMessage, setNewMessage] = useState("")

@@ -54,44 +54,9 @@ export function CustomerDashboard() {
       if (!currentBankingUserId) return
 
       setIsLoading(true)
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] dashboard fetchData start", { userId: currentBankingUserId })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:58",
-            message: "fetchData start",
-            data: { userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
       const supabase = createClient()
 
       // Fetch Accounts
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:80",
-            message: "accounts query start",
-            data: { table: "accounts", filterColumn: "customer_id", userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run9",
-            hypothesisId: "H",
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
