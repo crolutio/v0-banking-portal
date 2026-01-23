@@ -270,17 +270,42 @@ export type DbConversation = {
   last_message: string | null;
   created_at: string;
   updated_at: string;
+  source?: string | null;
+  handover_required?: boolean | null;
+  provider?: string | null;
+  provider_conversation_id?: string | null;
+  sentiment?: string | null;
+  sentiment_score?: number | null;
+  sla_deadline?: string | null;
+  sla_remaining?: number | null;
+  sla_status?: string | null;
+  queue?: string | null;
+  topic?: string | null;
+  last_message_time?: string | null;
+  start_time?: string | null;
+  ai_confidence?: number | null;
+  escalation_risk?: boolean | null;
+  tags?: string[] | null;
+  industry?: string | null;
 };
 
 export type DbMessage = {
   id: string;
   conversation_id: string;
-  sender_type: "customer" | "agent";
+  sender_type: "customer" | "agent" | "ai" | "system";
   sender_customer_id: string | null;
   sender_agent_id: string | null;
   content: string;
   is_internal: boolean;
   created_at: string;
+  source?: string | null;
+  channel?: string | null;
+  provider?: string | null;
+  provider_message_id?: string | null;
+  from_address?: string | null;
+  to_address?: string | null;
+  status?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 // Savings Goal Types

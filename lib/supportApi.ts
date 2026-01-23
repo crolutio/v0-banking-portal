@@ -8,14 +8,19 @@ export async function createConversation(args: {
   channel?: string;
 }): Promise<DbConversation> {
   const supabase = createClient();
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("conversations")
     .insert({
       customer_id: args.customer_id,
       subject: args.subject ?? null,
-      channel: args.channel ?? "app",
+      channel: args.channel ?? "chat",
       priority: args.priority ?? "medium",
       status: "open",
+      source: "banking",
+      industry: "banking",
+      start_time: now,
+      last_message_time: now,
     })
     .select()
     .single();
@@ -33,6 +38,7 @@ export async function fetchMessages(conversationId: string): Promise<DbMessage[]
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
+    .eq("source", "banking")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -53,8 +59,10 @@ export async function sendCustomerMessage(args: {
   conversation_id: string;
   sender_customer_id: string;
   content: string;
+  channel?: string;
 }): Promise<CustomerMessageResponse> {
   const supabase = createClient();
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -64,6 +72,9 @@ export async function sendCustomerMessage(args: {
       sender_agent_id: null,
       content: args.content,
       is_internal: false,
+      source: "banking",
+      channel: args.channel ?? "chat",
+      created_at: now,
     })
     .select()
     .single();
@@ -85,8 +96,10 @@ export async function sendAgentMessage(args: {
   sender_agent_id: string;
   content: string;
   is_internal?: boolean;
+  channel?: string;
 }): Promise<DbMessage> {
   const supabase = createClient();
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -96,6 +109,9 @@ export async function sendAgentMessage(args: {
       sender_agent_id: args.sender_agent_id,
       content: args.content,
       is_internal: !!args.is_internal,
+      source: "banking",
+      channel: args.channel ?? "chat",
+      created_at: now,
     })
     .select()
     .single();
@@ -105,4 +121,45 @@ export async function sendAgentMessage(args: {
   }
 
   return data as DbMessage;
+}
+
+export async function requestConversationHandover(args: {
+  conversation_id: string;
+  channel?: string;
+}): Promise<DbConversation> {
+  const supabase = createClient();
+  const now = new Date().toISOString();
+
+  const { data: conversation, error: updateError } = await supabase
+    .from("conversations")
+    .update({
+      status: "escalated",
+      handover_required: true,
+      updated_at: now,
+    })
+    .eq("id", args.conversation_id)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to request handover: ${updateError.message}`);
+  }
+
+  const { error: messageError } = await supabase.from("messages").insert({
+    conversation_id: args.conversation_id,
+    sender_type: "system",
+    sender_customer_id: null,
+    sender_agent_id: null,
+    content: "Customer requested a human agent handover.",
+    is_internal: false,
+    source: "banking",
+    channel: args.channel ?? "chat",
+    created_at: now,
+  });
+
+  if (messageError) {
+    throw new Error(`Failed to log handover message: ${messageError.message}`);
+  }
+
+  return conversation as DbConversation;
 }

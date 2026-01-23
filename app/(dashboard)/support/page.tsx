@@ -36,7 +36,7 @@ import {
 import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
-import { createConversation, sendCustomerMessage } from "@/lib/supportApi"
+import { createConversation, requestConversationHandover, sendCustomerMessage } from "@/lib/supportApi"
 
 
 export default function SupportPage() {
@@ -51,6 +51,7 @@ export default function SupportPage() {
   const [newTicketMessage, setNewTicketMessage] = useState("")
   const [newTicketPriority, setNewTicketPriority] = useState("medium")
   const [creating, setCreating] = useState(false)
+  const [escalating, setEscalating] = useState(false)
 
   const { conversations, refresh } = useCustomerConversations({ 
     customerId: customerId || "" 
@@ -158,7 +159,7 @@ export default function SupportPage() {
         customer_id: customerId,
         subject,
         priority: newTicketPriority,
-        channel: "app",
+        channel: "chat",
       })
 
       // select it immediately so message hook points at it
@@ -182,6 +183,25 @@ export default function SupportPage() {
       console.error("Failed to create ticket", e)
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function handleEscalate() {
+    if (!selectedConversation) return
+    if (selectedConversation.status === "escalated" || selectedConversation.handover_required) return
+
+    setEscalating(true)
+    try {
+      const updated = await requestConversationHandover({
+        conversation_id: selectedConversation.id,
+        channel: "chat",
+      })
+      setSelectedConversation(updated)
+      await refresh()
+    } catch (e) {
+      console.error("Failed to request handover", e)
+    } finally {
+      setEscalating(false)
     }
   }
 
@@ -583,9 +603,22 @@ export default function SupportPage() {
                       <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
                         <Send className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline">
+                      <Button
+                        variant="outline"
+                        onClick={handleEscalate}
+                        disabled={
+                          !selectedConversation ||
+                          escalating ||
+                          selectedConversation.status === "escalated" ||
+                          selectedConversation.handover_required
+                        }
+                      >
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Escalate
+                        {selectedConversation?.status === "escalated" || selectedConversation?.handover_required
+                          ? "Escalated"
+                          : escalating
+                            ? "Escalating..."
+                            : "Escalate"}
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 text-center">

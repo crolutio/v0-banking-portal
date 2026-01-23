@@ -26,6 +26,7 @@ export function useCustomerConversations(params: {
         .from("conversations")
         .select("*")
         .eq("customer_id", customerId)
+        .eq("source", "banking")
         .order("updated_at", { ascending: false });
 
       if (error) {

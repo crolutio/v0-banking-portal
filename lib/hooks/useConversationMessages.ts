@@ -35,6 +35,7 @@ export function useConversationMessages(params: {
           .from("messages")
           .select("*")
           .eq("conversation_id", conversationId)
+          .eq("source", "banking")
           .eq("is_internal", false)
           .order("created_at", { ascending: true });
 
