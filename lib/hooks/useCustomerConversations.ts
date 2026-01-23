@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createCallCenterClient } from "../supabase/call-center-client";
+import { createCallCenterClient } from "@/lib/supabase/call-center-client";
 import type { DbConversation } from "../types";
 
 
