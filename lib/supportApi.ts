@@ -1,5 +1,5 @@
 import type { DbConversation, DbMessage } from "./types";
-import { createCallCenterClient } from "./supabase/call-center-client";
+import { createClient } from "./supabase/client";
 
 export async function createConversation(args: {
   customer_id: string;
@@ -7,7 +7,7 @@ export async function createConversation(args: {
   priority?: string;
   channel?: string;
 }): Promise<DbConversation> {
-  const supabase = createCallCenterClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("conversations")
     .insert({
@@ -28,7 +28,7 @@ export async function createConversation(args: {
 }
 
 export async function fetchMessages(conversationId: string): Promise<DbMessage[]> {
-  const supabase = createCallCenterClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
     .select("*")
@@ -54,7 +54,7 @@ export async function sendCustomerMessage(args: {
   sender_customer_id: string;
   content: string;
 }): Promise<CustomerMessageResponse> {
-  const supabase = createCallCenterClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -86,7 +86,7 @@ export async function sendAgentMessage(args: {
   content: string;
   is_internal?: boolean;
 }): Promise<DbMessage> {
-  const supabase = createCallCenterClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
     .insert({

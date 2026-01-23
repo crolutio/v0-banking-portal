@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createCallCenterClient } from "../supabase/call-center-client";
+import { createClient } from "../supabase/client";
 import type { DbConversation } from "../types";
 
 
@@ -21,7 +21,7 @@ export function useCustomerConversations(params: {
 
     setLoading(true);
     try {
-      const supabase = createCallCenterClient();
+      const supabase = createClient();
       const { data, error } = await supabase
         .from("conversations")
         .select("*")
@@ -56,7 +56,7 @@ export function useCustomerConversations(params: {
     refresh().catch(console.error);
 
     // Realtime subscription (best effort)
-    const supabase = createCallCenterClient();
+    const supabase = createClient();
     const channel = supabase
       .channel(`cust:${customerId}:conversations`)
       .on(

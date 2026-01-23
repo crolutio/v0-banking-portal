@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DbMessage } from "../types";
 import { sendCustomerMessage } from "@/lib/supportApi";
-import { createCallCenterClient } from "../supabase/call-center-client";
+import { createClient } from "../supabase/client";
 import { subscribeToConversationMessages } from "../realtime";
 
 export function useConversationMessages(params: {
@@ -30,7 +30,7 @@ export function useConversationMessages(params: {
       }
       let history: DbMessage[] = [];
       try {
-        const supabase = createCallCenterClient();
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("messages")
           .select("*")

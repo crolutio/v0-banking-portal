@@ -322,10 +322,7 @@ export default function CardsPage() {
       if (!currentBankingUserId) return
 
       setIsLoading(true)
-      // #region agent log
-      if (typeof window !== "undefined") {
         console.log("[debug] cards fetchCards start", { userId: currentBankingUserId })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -337,9 +334,7 @@ export default function CardsPage() {
             runId: "run8",
             hypothesisId: "G",
           }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
       }
-      // #endregion
       const supabase = createClient()
 
       const { data, error } = await supabase
@@ -347,8 +342,6 @@ export default function CardsPage() {
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
-      // #region agent log
-      if (typeof window !== "undefined") {
         console.log("[debug] cards query result", {
           userId: currentBankingUserId,
           hasError: !!error,
@@ -356,7 +349,6 @@ export default function CardsPage() {
           errorCode: error?.code,
           count: data?.length,
         })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -374,9 +366,7 @@ export default function CardsPage() {
             runId: "run8",
             hypothesisId: "G",
           }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
       }
-      // #endregion
 
       if (error) {
         console.error("Error fetching cards:", error)
