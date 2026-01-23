@@ -322,19 +322,6 @@ export default function CardsPage() {
       if (!currentBankingUserId) return
 
       setIsLoading(true)
-        console.log("[debug] cards fetchCards start", { userId: currentBankingUserId })
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "cards/page.tsx:324",
-            message: "fetchCards start",
-            data: { userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-      }
       const supabase = createClient()
 
       const { data, error } = await supabase
@@ -349,24 +336,6 @@ export default function CardsPage() {
           errorCode: error?.code,
           count: data?.length,
         })
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "cards/page.tsx:332",
-            message: "cards query result",
-            data: {
-              userId: currentBankingUserId,
-              hasError: !!error,
-              errorMessage: error?.message,
-              errorCode: error?.code,
-              count: data?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-      }
 
       if (error) {
         console.error("Error fetching cards:", error)
