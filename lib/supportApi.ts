@@ -59,7 +59,7 @@ export async function sendCustomerMessage(args: {
     .from("messages")
     .insert({
       conversation_id: args.conversation_id,
-      sender_type: "customer",
+      type: "customer",
       sender_customer_id: args.sender_customer_id,
       sender_agent_id: null,
       content: args.content,
@@ -91,7 +91,7 @@ export async function sendAgentMessage(args: {
     .from("messages")
     .insert({
       conversation_id: args.conversation_id,
-      sender_type: "agent",
+      type: "agent",
       sender_customer_id: null,
       sender_agent_id: args.sender_agent_id,
       content: args.content,
