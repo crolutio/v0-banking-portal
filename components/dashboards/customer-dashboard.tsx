@@ -54,79 +54,14 @@ export function CustomerDashboard() {
       if (!currentBankingUserId) return
 
       setIsLoading(true)
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] dashboard fetchData start", { userId: currentBankingUserId })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:58",
-            message: "fetchData start",
-            data: { userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
       const supabase = createClient()
 
       // Fetch Accounts
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:80",
-            message: "accounts query start",
-            data: { table: "accounts", filterColumn: "customer_id", userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run9",
-            hypothesisId: "H",
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] dashboard accounts query result", {
-          userId: currentBankingUserId,
-          hasError: !!accountsError,
-          errorMessage: accountsError?.message,
-          errorCode: accountsError?.code,
-          count: accountsData?.length,
-        })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:66",
-            message: "accounts query result",
-            data: {
-              userId: currentBankingUserId,
-              hasError: !!accountsError,
-              errorMessage: accountsError?.message,
-              errorCode: accountsError?.code,
-              count: accountsData?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
 
       if (accountsError) {
         console.error("Error fetching accounts:", accountsError)
@@ -150,23 +85,6 @@ export function CustomerDashboard() {
       // Fetch Transactions (for all accounts)
       if (mappedAccounts.length > 0) {
         const accountIds = mappedAccounts.map(a => a.id)
-        // #region agent log
-        if (typeof window !== "undefined") {
-          fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "customer-dashboard.tsx:138",
-              message: "transactions query start",
-              data: { table: "transactions", filterColumn: "account_id", accountIdCount: accountIds.length },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run9",
-              hypothesisId: "H",
-            }),
-          }).catch(() => {})
-        }
-        // #endregion
         const { data: txData, error: txError } = await supabase
           .from("transactions")
           .select("*")
@@ -208,58 +126,11 @@ export function CustomerDashboard() {
       }
 
       // Fetch Cards
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:191",
-            message: "cards query start",
-            data: { table: "cards", filterColumn: "customer_id", userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run9",
-            hypothesisId: "H",
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       const { data: cardsData, error: cardsError } = await supabase
         .from("cards")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] dashboard cards query result", {
-          userId: currentBankingUserId,
-          hasError: !!cardsError,
-          errorMessage: cardsError?.message,
-          errorCode: cardsError?.code,
-          count: cardsData?.length,
-        })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:88",
-            message: "cards query result",
-            data: {
-              userId: currentBankingUserId,
-              hasError: !!cardsError,
-              errorMessage: cardsError?.message,
-              errorCode: cardsError?.code,
-              count: cardsData?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
 
       if (cardsError) console.error("Error fetching cards:", cardsError)
 
@@ -280,58 +151,11 @@ export function CustomerDashboard() {
       setCards(mappedCards)
 
       // Fetch Loans
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:241",
-            message: "loans query start",
-            data: { table: "loans", filterColumn: "customer_id", userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run9",
-            hypothesisId: "H",
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       const { data: loansData, error: loansError } = await supabase
         .from("loans")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] dashboard loans query result", {
-          userId: currentBankingUserId,
-          hasError: !!loansError,
-          errorMessage: loansError?.message,
-          errorCode: loansError?.code,
-          count: loansData?.length,
-        })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "customer-dashboard.tsx:121",
-            message: "loans query result",
-            data: {
-              userId: currentBankingUserId,
-              hasError: !!loansError,
-              errorMessage: loansError?.message,
-              errorCode: loansError?.code,
-              count: loansData?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
 
       if (loansError) console.error("Error fetching loans:", loansError)
 

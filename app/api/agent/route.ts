@@ -12,8 +12,8 @@ async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
 
     const { data: accounts, error } = await supabase
       .from("accounts")
-      .select("id, name, balance, available_balance")
-      .eq("user_id", userId)
+      .select("id, name, balance, available_balance, currency")
+      .eq("customer_id", userId)
 
     if (error) {
       console.error("[agent/voice] Error fetching accounts:", error.message)
@@ -29,11 +29,17 @@ async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
       return Number.isFinite(num) ? num : 0
     }
 
-    const totalBalance = accounts.reduce((sum: number, a: any) => sum + toNumber(a.balance), 0)
-    const availableCash = accounts.reduce(
-      (sum: number, a: any) => sum + toNumber(a.available_balance ?? a.balance),
-      0,
-    )
+    // Convert all balances to AED (USD rate = 3.67)
+    const totalBalance = accounts.reduce((sum: number, a: any) => {
+      const balance = toNumber(a.balance)
+      const rate = a.currency === "USD" ? 3.67 : 1
+      return sum + (balance * rate)
+    }, 0)
+    const availableCash = accounts.reduce((sum: number, a: any) => {
+      const balance = toNumber(a.available_balance ?? a.balance)
+      const rate = a.currency === "USD" ? 3.67 : 1
+      return sum + (balance * rate)
+    }, 0)
 
     const accountCount = accounts.length
     const accountLabel = accountCount === 1 ? "account" : "accounts"

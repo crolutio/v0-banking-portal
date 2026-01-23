@@ -464,24 +464,6 @@ export default function AccountsPage() {
       if (!currentBankingUserId) return
 
       setIsLoading(true)
-      // #region agent log
-      if (typeof window !== "undefined") {
-        console.log("[debug] accounts fetchData start", { userId: currentBankingUserId })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "accounts/page.tsx:466",
-            message: "fetchData start",
-            data: { userId: currentBankingUserId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
       const supabase = createClient()
 
       // Fetch Accounts
@@ -491,8 +473,6 @@ export default function AccountsPage() {
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
-      // #region agent log
-      if (typeof window !== "undefined") {
         console.log("[debug] accounts query result", {
           userId: currentBankingUserId,
           hasError: !!accountsError,
@@ -500,27 +480,6 @@ export default function AccountsPage() {
           errorCode: accountsError?.code,
           count: accountsData?.length,
         })
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "accounts/page.tsx:477",
-            message: "accounts query result",
-            data: {
-              userId: currentBankingUserId,
-              hasError: !!accountsError,
-              errorMessage: accountsError?.message,
-              errorCode: accountsError?.code,
-              count: accountsData?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run8",
-            hypothesisId: "G",
-          }),
-        }).catch((err) => console.warn("[debug] log POST failed", err))
-      }
-      // #endregion
 
       if (accountsError) {
         console.error("Error fetching accounts FULL OBJECT:", JSON.stringify(accountsError, null, 2))
@@ -551,8 +510,6 @@ export default function AccountsPage() {
           .in("account_id", accountIds)
           .order("date", { ascending: false })
 
-        // #region agent log
-        if (typeof window !== "undefined") {
           console.log("[debug] transactions query result", {
             accountCount: accountIds.length,
             hasError: !!txError,
@@ -560,27 +517,6 @@ export default function AccountsPage() {
             errorCode: txError?.code,
             count: txData?.length,
           })
-          fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "accounts/page.tsx:505",
-              message: "transactions query result",
-              data: {
-                accountCount: accountIds.length,
-                hasError: !!txError,
-                errorMessage: txError?.message,
-                errorCode: txError?.code,
-                count: txData?.length,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run8",
-              hypothesisId: "G",
-            }),
-          }).catch((err) => console.warn("[debug] log POST failed", err))
-        }
-        // #endregion
 
         if (txError) console.error("Error fetching transactions:", txError)
 

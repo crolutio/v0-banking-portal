@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DbMessage } from "../types";
 import { sendCustomerMessage } from "@/lib/supportApi";
-import { createCallCenterClient } from "../supabase/call-center-client";
+import { createClient } from "../supabase/client";
 import { subscribeToConversationMessages } from "../realtime";
 
 export function useConversationMessages(params: {
@@ -23,23 +23,6 @@ export function useConversationMessages(params: {
     let cancelled = false;
 
     async function load() {
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "useConversationMessages.ts:21",
-            message: "load() start",
-            data: { conversationId, customerId, hasConversationId: !!conversationId },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run7",
-            hypothesisId: "F",
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
       if (!conversationId) {
         setMessages([]);
         seenIdsRef.current = new Set();
@@ -47,24 +30,7 @@ export function useConversationMessages(params: {
       }
       let history: DbMessage[] = [];
       try {
-        // #region agent log
-        if (typeof window !== "undefined") {
-          fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "useConversationMessages.ts:31",
-              message: "before messages query",
-              data: { conversationId, table: "messages" },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run7",
-              hypothesisId: "F",
-            }),
-          }).catch(() => {});
-        }
-        // #endregion
-        const supabase = createCallCenterClient();
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("messages")
           .select("*")
@@ -77,23 +43,6 @@ export function useConversationMessages(params: {
         }
       history = (data ?? []) as DbMessage[];
       } catch (err) {
-        // #region agent log
-        if (typeof window !== "undefined") {
-          fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "useConversationMessages.ts:44",
-              message: "messages query error",
-              data: { conversationId, error: err?.toString() },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run7",
-              hypothesisId: "F",
-            }),
-          }).catch(() => {});
-        }
-        // #endregion
         throw err;
       }
       if (cancelled) return;
@@ -103,23 +52,6 @@ export function useConversationMessages(params: {
       for (const m of filteredHistory) seen.add(m.id);
       seenIdsRef.current = seen;
 
-      // #region agent log
-      if (typeof window !== "undefined") {
-        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "useConversationMessages.ts:58",
-            message: "history loaded",
-            data: { conversationId, count: filteredHistory.length, ids: filteredHistory.map((m) => m.id) },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run7",
-            hypothesisId: "F",
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
       setMessages(filteredHistory);
     }
 

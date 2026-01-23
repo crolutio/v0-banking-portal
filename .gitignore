@@ -16,20 +16,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (never commit secrets)
-.env
-.env.*
-.env.*.local
-.env.local
-.env.development
-.env.production
-
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local env files
+.env*.local
+.env
 
 
 

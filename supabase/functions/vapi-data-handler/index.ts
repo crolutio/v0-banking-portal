@@ -60,7 +60,7 @@ async function fetchTableByUser(
   supabase: any,
   table: string,
   userId: string,
-  column: string = "user_id",
+  column: string = "customer_id",
 ): Promise<any[]> {
   console.log(`[vapi-data-handler] Fetching ${table} for userId: ${userId}`)
   const { data, error } = await supabase.from(table).select("*").eq(column, userId)
@@ -556,7 +556,12 @@ GUIDELINES:
         console.error("[vapi-data-handler] Gemini call failed:", err)
         // Fallback: simple response
         if (accounts.length > 0) {
-          const total = accounts.reduce((sum: number, acc: any) => sum + toNumber(acc.balance), 0)
+          // Convert all balances to AED (USD rate = 3.67)
+          const total = accounts.reduce((sum: number, acc: any) => {
+            const balance = toNumber(acc.balance)
+            const rate = acc.currency === "USD" ? 3.67 : 1
+            return sum + (balance * rate)
+          }, 0)
           resultMessage = `Your total balance is ${total.toLocaleString()} AED across ${accounts.length} account${accounts.length > 1 ? 's' : ''}.`
         } else {
           resultMessage = "I couldn't find your account information."
@@ -565,7 +570,12 @@ GUIDELINES:
     } else {
       // Fallback if no Gemini API key
       if (accounts.length > 0) {
-        const total = accounts.reduce((sum: number, acc: any) => sum + toNumber(acc.balance), 0)
+        // Convert all balances to AED (USD rate = 3.67)
+        const total = accounts.reduce((sum: number, acc: any) => {
+          const balance = toNumber(acc.balance)
+          const rate = acc.currency === "USD" ? 3.67 : 1
+          return sum + (balance * rate)
+        }, 0)
         resultMessage = `Your total balance is ${total.toLocaleString()} AED across ${accounts.length} account${accounts.length > 1 ? 's' : ''}.`
       } else {
         resultMessage = "I couldn't find your account information."

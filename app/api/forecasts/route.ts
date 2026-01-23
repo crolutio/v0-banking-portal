@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   // Or just rely on the fact that for the demo user we fetch all accounts
   // Let's replicate the pattern from chat route: fetch accounts -> fetch txs
   
-  const { data: accounts } = await supabase.from("accounts").select("id").eq("user_id", userId)
+  const { data: accounts } = await supabase.from("accounts").select("id").eq("customer_id", userId)
   const accountIds = (accounts || []).map(a => a.id)
 
   if (accountIds.length === 0) {
