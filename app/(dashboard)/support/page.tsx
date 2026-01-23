@@ -609,12 +609,12 @@ export default function SupportPage() {
                         disabled={
                           !selectedConversation ||
                           escalating ||
-                          selectedConversation.status === "escalated" ||
-                          selectedConversation.handover_required
+                          selectedConversation?.status === "escalated" ||
+                          !!selectedConversation?.handover_required
                         }
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
-                        {selectedConversation?.status === "escalated" || selectedConversation?.handover_required
+                        {selectedConversation?.status === "escalated" || selectedConversation?.handover_required === true
                           ? "Escalated"
                           : escalating
                             ? "Escalating..."
