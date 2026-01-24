@@ -17,8 +17,8 @@ export function subscribeToConversationMessages(
       },
       (payload) => {
         const message = payload.new;
-        // Only process messages that are not internal and from supported sources
-        if (!message.is_internal && (message.source === "banking" || message.source === "contact_center")) {
+        // Only process messages that are not internal
+        if (!message.is_internal) {
           onNewMessage(message);
         }
       }
