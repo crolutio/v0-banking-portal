@@ -139,7 +139,16 @@ export async function sendCustomerMessage(args: {
   let aiReply: string | null = null;
   let aiMessageId: string | null = null;
 
-  if (!args.suppressAi) {
+  // Check if conversation has been handed over to human agent
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("handover_required")
+    .eq("id", args.conversation_id)
+    .single();
+
+  const hasHandover = conversation?.handover_required === true;
+
+  if (!args.suppressAi && !hasHandover) {
     try {
       const aiResponse = await fetch("/api/chat", {
         method: "POST",
