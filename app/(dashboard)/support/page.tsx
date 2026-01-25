@@ -67,6 +67,7 @@ export default function SupportPage() {
   const [newTicketPriority, setNewTicketPriority] = useState("medium")
   const [creating, setCreating] = useState(false)
   const [escalating, setEscalating] = useState(false)
+  const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null)
 
   const { conversations, refresh } = useCustomerConversations({ 
     customerId: customerId || "" 
@@ -182,8 +183,8 @@ export default function SupportPage() {
 
       setNewTicketDialog(false)
 
-      // send first message through hook for loading indicator
-      await send(firstMsg)
+      // send first message after conversation is selected
+      setPendingFirstMessage(firstMsg)
 
       setNewTicketSubject("")
       setNewTicketMessage("")
@@ -216,6 +217,13 @@ export default function SupportPage() {
       setEscalating(false)
     }
   }
+
+  useEffect(() => {
+    if (!pendingFirstMessage || !selectedConversation) return
+    const messageToSend = pendingFirstMessage
+    setPendingFirstMessage(null)
+    send(messageToSend).catch((e) => console.error("Failed to send first ticket message", e))
+  }, [pendingFirstMessage, selectedConversation, send])
 
   const statusColors: Record<string, string> = {
     open: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -501,46 +509,46 @@ export default function SupportPage() {
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bot className="h-3 w-3 text-primary" />
             </div>
             <div>
-              <p className="font-medium">AI Assistant</p>
-              <p className="text-xs text-muted-foreground">Get instant answers</p>
+              <p className="text-sm font-medium">AI Assistant</p>
+              <p className="text-[11px] text-muted-foreground">Get instant answers</p>
             </div>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <Phone className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <Phone className="h-3 w-3 text-primary" />
             </div>
             <div>
-              <p className="font-medium">Call Us</p>
-              <p className="text-xs text-muted-foreground">800-BANK-FUTURE</p>
+              <p className="text-sm font-medium">Call Us</p>
+              <p className="text-[11px] text-muted-foreground">800-BANK-FUTURE</p>
             </div>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="h-3 w-3 text-primary" />
             </div>
             <div>
-              <p className="font-medium">Email</p>
-              <p className="text-xs text-muted-foreground">support@bankfuture.com</p>
+              <p className="text-sm font-medium">Email</p>
+              <p className="text-[11px] text-muted-foreground">support@bankfuture.com</p>
             </div>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <FileText className="h-3 w-3 text-primary" />
             </div>
             <div>
-              <p className="font-medium">FAQs</p>
-              <p className="text-xs text-muted-foreground">Browse help articles</p>
+              <p className="text-sm font-medium">FAQs</p>
+              <p className="text-[11px] text-muted-foreground">Browse help articles</p>
             </div>
           </CardContent>
         </Card>
@@ -713,7 +721,7 @@ export default function SupportPage() {
                             : "Escalate"}
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-4 text-center">
+                    <p className="text-xs text-muted-foreground mt-8 text-center">
                       AI will try to help first. Click "Escalate" to speak with a human agent.
                     </p>
                   </div>
