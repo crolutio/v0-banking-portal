@@ -47,7 +47,7 @@ export function useConversationMessages(params: {
           .from("messages")
           .select("*")
           .eq("conversation_id", conversationId)
-          .eq("is_internal", false)
+          .or("is_internal.is.null,is_internal.eq.false")
           .order("created_at", { ascending: true });
 
         if (error) {
