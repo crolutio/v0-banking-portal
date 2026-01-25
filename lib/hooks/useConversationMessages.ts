@@ -33,6 +33,23 @@ export function useConversationMessages(params: {
   const lastLoadStartedAtRef = useRef<number>(0);
   const lastSendAtRef = useRef<number>(0);
 
+  // Reset per-conversation state on change
+  useEffect(() => {
+    if (!conversationId) {
+      setMessages([]);
+      seenIdsRef.current = new Set();
+      lastAiMessageIdRef.current = null;
+      lastLoadStartedAtRef.current = 0;
+      lastSendAtRef.current = 0;
+      return;
+    }
+    setMessages([]);
+    seenIdsRef.current = new Set();
+    lastAiMessageIdRef.current = null;
+    lastLoadStartedAtRef.current = 0;
+    lastSendAtRef.current = 0;
+  }, [conversationId]);
+
   // Load history
   useEffect(() => {
     let cancelled = false;
