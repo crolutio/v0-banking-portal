@@ -442,7 +442,7 @@ export default function SupportPage() {
   ]
 
   return (
-    <div className="flex flex-col h-full overflow-hidden space-y-4 p-4">
+    <div className="flex flex-col h-full overflow-hidden space-y-3 p-4 pt-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
@@ -508,7 +508,7 @@ export default function SupportPage() {
 
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
           <CardContent className="p-2 flex items-center gap-2">
             <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
               <Bot className="h-3 w-3 text-primary" />
@@ -519,7 +519,7 @@ export default function SupportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
           <CardContent className="p-2 flex items-center gap-2">
             <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
               <Phone className="h-3 w-3 text-primary" />
@@ -530,7 +530,7 @@ export default function SupportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
           <CardContent className="p-2 flex items-center gap-2">
             <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
               <Mail className="h-3 w-3 text-primary" />
@@ -541,7 +541,7 @@ export default function SupportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
           <CardContent className="p-2 flex items-center gap-2">
             <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
               <FileText className="h-3 w-3 text-primary" />
@@ -617,6 +617,16 @@ export default function SupportPage() {
                       <div className="space-y-4">
                         {uniqueMessages.map((m, idx) => {
                           const isUser = m.sender_type === "customer"
+                          const isSystem = m.sender_type === "system"
+                          if (isSystem) {
+                            return (
+                              <div key={`${m.id}-${idx}`} className="flex justify-center">
+                                <div className="rounded-full bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground">
+                                  {m.content}
+                                </div>
+                              </div>
+                            )
+                          }
                           return (
                             <div
                               key={`${m.id}-${idx}`}
