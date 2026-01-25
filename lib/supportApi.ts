@@ -2,6 +2,7 @@ import type { DbConversation, DbMessage } from "./types";
 import { createCallCenterClient } from "./supabase/call-center-client";
 
 export async function createConversation(args: {
+  conversation_id?: string;
   customer_id: string;
   subject?: string;
   priority?: string;
@@ -22,6 +23,50 @@ export async function createConversation(args: {
   const supabase = createCallCenterClient();
   const now = new Date().toISOString();
   const slaDeadline = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+  let existing: DbConversation | null = null;
+  if (args.conversation_id) {
+    const byId = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("id", args.conversation_id)
+      .single();
+    if (!byId.error && byId.data) {
+      existing = byId.data as DbConversation;
+    }
+  } else if (args.provider_conversation_id) {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("source", "banking")
+      .eq("provider", args.provider ?? "app")
+      .eq("provider_conversation_id", args.provider_conversation_id)
+      .limit(1);
+    if (!error && data && data.length > 0) {
+      existing = data[0] as DbConversation;
+    }
+  }
+
+  if (existing) {
+    const nextStatus = existing.status === "escalated" ? existing.status : "active";
+    const { data: updated, error: updateError } = await supabase
+      .from("conversations")
+      .update({
+        status: nextStatus,
+        last_message: args.last_message ?? existing.last_message ?? null,
+        last_message_time: now,
+        updated_at: now,
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed to update conversation: ${updateError.message}`);
+    }
+    return updated as DbConversation;
+  }
+
   const { data, error } = await supabase
     .from("conversations")
     .insert({
@@ -46,6 +91,7 @@ export async function createConversation(args: {
       handover_required: false,
       start_time: now,
       last_message_time: now,
+      updated_at: now,
     })
     .select()
     .single();
@@ -131,6 +177,25 @@ export async function sendCustomerMessage(args: {
 
   const supabase = createCallCenterClient();
   const now = new Date().toISOString();
+
+  if (args.provider_message_id) {
+    const { data: existing } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("provider", args.provider ?? "app")
+      .eq("provider_message_id", args.provider_message_id)
+      .maybeSingle();
+
+    if (existing?.id) {
+      return {
+        status: args.suppressAi ? "handoff" : "ai",
+        customer_message_id: existing.id,
+        ai_reply: null,
+        ai_message_id: null,
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -167,9 +232,20 @@ export async function sendCustomerMessage(args: {
   let aiReply: string | null = null;
   let aiMessageId: string | null = null;
 
+  // Check if conversation has been handed over to human agent
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("handover_required,status")
+    .eq("id", args.conversation_id)
+    .single();
+
+  const hasHandover = conversation?.handover_required === true;
+  const nextStatus = conversation?.status === "escalated" ? "escalated" : "active";
+
   const { error: convoUpdateError } = await supabase
     .from("conversations")
     .update({
+      status: nextStatus,
       last_message: args.content,
       last_message_time: now,
       updated_at: now,
@@ -179,15 +255,6 @@ export async function sendCustomerMessage(args: {
   if (convoUpdateError) {
     console.error("[Support API] Conversation update error:", convoUpdateError);
   }
-
-  // Check if conversation has been handed over to human agent
-  const { data: conversation } = await supabase
-    .from("conversations")
-    .select("handover_required")
-    .eq("id", args.conversation_id)
-    .single();
-
-  const hasHandover = conversation?.handover_required === true;
 
   if (!args.suppressAi && !hasHandover) {
     try {
