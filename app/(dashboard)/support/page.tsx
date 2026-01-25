@@ -49,7 +49,7 @@ import {
 import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
-import { createConversation, requestConversationHandover, sendCustomerMessage } from "@/lib/supportApi"
+import { createConversation, requestConversationHandover } from "@/lib/supportApi"
 
 const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"]
 
@@ -182,12 +182,8 @@ export default function SupportPage() {
 
       setNewTicketDialog(false)
 
-      // send first message
-      await sendCustomerMessage({
-        conversation_id: conv.id,
-        sender_customer_id: customerId,
-        content: firstMsg,
-      })
+      // send first message through hook for loading indicator
+      await send(firstMsg)
 
       setNewTicketSubject("")
       setNewTicketMessage("")
@@ -438,7 +434,7 @@ export default function SupportPage() {
   ]
 
   return (
-    <div className="flex flex-col h-full overflow-hidden space-y-6 p-6">
+    <div className="flex flex-col h-full overflow-hidden space-y-4 p-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
@@ -505,9 +501,9 @@ export default function SupportPage() {
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bot className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="font-medium">AI Assistant</p>
@@ -516,9 +512,9 @@ export default function SupportPage() {
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Phone className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <Phone className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="font-medium">Call Us</p>
@@ -527,9 +523,9 @@ export default function SupportPage() {
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="font-medium">Email</p>
@@ -538,9 +534,9 @@ export default function SupportPage() {
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="font-medium">FAQs</p>
@@ -717,7 +713,7 @@ export default function SupportPage() {
                             : "Escalate"}
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                    <p className="text-xs text-muted-foreground mt-4 text-center">
                       AI will try to help first. Click "Escalate" to speak with a human agent.
                     </p>
                   </div>
