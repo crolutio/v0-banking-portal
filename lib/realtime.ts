@@ -1,10 +1,10 @@
-import { createClient } from "./supabase/client";
+import { createCallCenterClient } from "./supabase/call-center-client";
 
 export function subscribeToConversationMessages(
   conversationId: string,
   onNewMessage: (msg: any) => void
 ) {
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const channel = supabase
     .channel(`conv:${conversationId}`)
     .on(

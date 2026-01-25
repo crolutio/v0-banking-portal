@@ -78,13 +78,13 @@ export function AskAIBankerWidget({
                   className="cursor-pointer hover:bg-muted/50 transition-colors border-none shadow-none"
                   onClick={card.onClick}
                 >
-                  <CardContent className="p-2 pl-4 flex items-center gap-3">
+                  <CardContent className="p-1.5 pl-3 flex items-center gap-2.5">
                     <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <card.icon className="h-3 w-3 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-base">{card.title}</p>
-                      <p className="text-sm text-muted-foreground">{card.subtitle}</p>
+                      <p className="font-medium text-base leading-tight">{card.title}</p>
+                      <p className="text-sm leading-tight text-muted-foreground">{card.subtitle}</p>
                     </div>
                   </CardContent>
                 </Card>
