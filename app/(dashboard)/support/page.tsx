@@ -69,6 +69,8 @@ export default function SupportPage() {
   const [newTicketPriority, setNewTicketPriority] = useState("medium")
   const [creating, setCreating] = useState(false)
   const [escalating, setEscalating] = useState(false)
+  const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null)
+  const [pendingConversationId, setPendingConversationId] = useState<string | null>(null)
 
   const { conversations, refresh } = useCustomerConversations({ 
     customerId: customerId || "" 
@@ -193,16 +195,24 @@ export default function SupportPage() {
       // refresh the list
       await refresh()
 
-      // send first message with a small delay to ensure hook is ready
-      setTimeout(() => {
-        send(firstMsg).catch((e) => console.error("Failed to send first ticket message", e))
-      }, 100)
+      // queue first message to send when the conversation id is active in the hook
+      setPendingFirstMessage(firstMsg)
+      setPendingConversationId(conv.id)
     } catch (e) {
       console.error("Failed to create ticket", e)
     } finally {
       setCreating(false)
     }
   }
+  useEffect(() => {
+    if (!pendingFirstMessage || !pendingConversationId) return
+    if (selectedConversation?.id !== pendingConversationId) return
+    const messageToSend = pendingFirstMessage
+    setPendingFirstMessage(null)
+    setPendingConversationId(null)
+    send(messageToSend).catch((e) => console.error("Failed to send first ticket message", e))
+  }, [pendingFirstMessage, pendingConversationId, selectedConversation?.id, send])
+
 
   async function handleEscalate() {
     if (!selectedConversation) return
