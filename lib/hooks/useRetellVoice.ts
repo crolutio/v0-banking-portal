@@ -91,6 +91,11 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     onError,
   } = options
 
+  const onMessageRef = useRef(onMessage)
+  const onCallStartRef = useRef(onCallStart)
+  const onCallEndRef = useRef(onCallEnd)
+  const onErrorRef = useRef(onError)
+
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -102,6 +107,22 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
   const lastProcessedIndexRef = useRef<number>(0)
   const transcriptRef = useRef<TranscriptMessage[]>([])
   const lastTranscriptRef = useRef<Array<{ role: string; content: string }>>([])
+
+  useEffect(() => {
+    onMessageRef.current = onMessage
+  }, [onMessage])
+
+  useEffect(() => {
+    onCallStartRef.current = onCallStart
+  }, [onCallStart])
+
+  useEffect(() => {
+    onCallEndRef.current = onCallEnd
+  }, [onCallEnd])
+
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
 
   // Initialize Retell client on mount
   useEffect(() => {
@@ -125,7 +146,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
       setIsConnected(false)
       setIsConnecting(false)
       setIsSpeaking(false)
-      onCallEnd?.(finalTranscript)
+      onCallEndRef.current?.(finalTranscript)
     })
 
     client.on("agent_start_talking", () => {
@@ -160,7 +181,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
           const previousMessage = previous[i]
           const nextMessage = newMessages[i]
           if (!previousMessage || previousMessage.content !== nextMessage.content) {
-            onMessage?.(nextMessage)
+            onMessageRef.current?.(nextMessage)
           }
         }
 
@@ -175,7 +196,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
       setError(errorMessage)
       setIsConnecting(false)
       setIsConnected(false)
-      onError?.(err)
+      onErrorRef.current?.(err)
     })
 
     return () => {
@@ -185,7 +206,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
         // Ignore cleanup errors
       }
     }
-  }, [onCallEnd, onMessage, onError])
+  }, [])
 
   const startCall = useCallback(async () => {
     if (!retellClientRef.current || isConnecting || isConnected) return
@@ -219,15 +240,15 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
         sampleRate: 24000,
       })
 
-      onCallStart?.(newCallId)
+      onCallStartRef.current?.(newCallId)
     } catch (err) {
       console.error("[Retell Hook] Failed to start:", err)
       const errorMessage = err instanceof Error ? err.message : "Failed to start call"
       setError(errorMessage)
       setIsConnecting(false)
-      onError?.(err instanceof Error ? err : new Error(errorMessage))
+      onErrorRef.current?.(err instanceof Error ? err : new Error(errorMessage))
     }
-  }, [agentId, metadata, dynamicVariables, isConnecting, isConnected, onCallStart, onError])
+  }, [agentId, metadata, dynamicVariables, isConnecting, isConnected])
 
   const endCall = useCallback(() => {
     retellClientRef.current?.stopCall()

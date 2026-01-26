@@ -547,7 +547,7 @@ const suggestedPrompts = [
 
 export function FloatingChatBubble() {
   const pathname = usePathname()
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const { theme } = useTheme()
   const { chatState, agentId, initialMessage, closeChat, minimizeChat, normalizeChat, toggleFullscreen } = useFloatingChat()
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
@@ -585,10 +585,13 @@ export function FloatingChatBubble() {
   } = useRetellVoice({
     dynamicVariables: {
       customer_name: currentUser?.name || "Customer",
-      user_id: currentUser?.id || "",
+      user_id: currentBankingUserId || "",
+      customer_id: currentBankingUserId || "",
+      profile_id: currentUser?.id || "",
     },
     metadata: {
       userId: currentUser?.id,
+      customerId: currentBankingUserId,
       agentId,
       currentPage: pathname,
     },
