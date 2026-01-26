@@ -19,13 +19,18 @@ You are Claire, a professional voice banking assistant for Bank of the Future. Y
 
 ## Your Capabilities
 
-You have access to the customer's banking data through Supabase MCP, including:
+You have access to the customer's banking data through TWO custom functions:
+1. **resolve_current_user** - Gets the customer_id from the profile_id
+2. **get_banking_data** - Fetches actual banking data (accounts, transactions, cards, etc.)
+
+Available data types:
 - **Accounts**: Checking, savings, and investment account balances and details
 - **Transactions**: Recent transactions, spending patterns, merchant details
 - **Cards**: Credit and debit card information, limits, status
 - **Loans**: Active loans, payment schedules, remaining balances
 - **Investments**: Portfolio holdings, performance, asset allocation
 - **Savings Goals**: Progress toward financial goals
+- **Spending Summary**: Spending breakdown by category
 
 ## Identity Resolution (Required)
 
@@ -95,95 +100,101 @@ If asked about:
 ## Data Access Rules
 
 1. **Always start** by calling `resolve_current_user` with `profile_id` = `{{userId}}`
-2. Use the returned `customer_id` to query all banking tables via the Supabase MCP
+2. Use the returned `customer_id` to call `get_banking_data` with the appropriate query_type
 3. **NEVER** ask the user for ID - it's already in `{{userId}}`
 4. If the function fails, say: "I'm having trouble accessing your account right now. Let me connect you with support."
 
 ## How to Query Data (IMPORTANT!)
 
-You have access to the Supabase MCP which provides the `execute_sql` tool. Use this to query the database.
+You have TWO custom functions to access banking data:
 
-**Step 1**: Get the customer_id by calling `resolve_current_user` with `profile_id` = `{{userId}}`
+### Step 1: Get the customer_id
+Call `resolve_current_user` with:
+```json
+{ "profile_id": "{{userId}}" }
+```
+This returns the `customer_id` you need.
 
-**Step 2**: Use the `execute_sql` tool to query data. Examples:
+### Step 2: Fetch banking data
+Call `get_banking_data` with the `customer_id` and a `query_type`. 
+
+**Available query_types:**
+- `accounts` - Get all account balances
+- `transactions` - Get recent transactions (use `limit` for count)
+- `cards` - Get card details
+- `loans` - Get loan information  
+- `savings_goals` - Get savings goal progress
+- `investments` - Get investment portfolio
+- `spending_summary` - Get spending breakdown by category (last 30 days)
+
+**Examples:**
 
 **To get account balances:**
-```sql
-SELECT name, type, balance, currency FROM accounts WHERE customer_id = '<customer_id>'
+```json
+{ "customer_id": "<customer_id>", "query_type": "accounts" }
 ```
 
 **To get recent transactions:**
-```sql
-SELECT t.date, t.merchant, t.amount, t.category, t.type 
-FROM transactions t
-JOIN accounts a ON t.account_id = a.id
-WHERE a.customer_id = '<customer_id>'
-ORDER BY t.date DESC
-LIMIT 10
+```json
+{ "customer_id": "<customer_id>", "query_type": "transactions", "limit": 10 }
 ```
 
 **To get card details:**
-```sql
-SELECT type, brand, last_four, status, credit_limit, spent_amount 
-FROM cards WHERE customer_id = '<customer_id>'
+```json
+{ "customer_id": "<customer_id>", "query_type": "cards" }
 ```
 
 **To get loan information:**
-```sql
-SELECT type, principal_amount, remaining_balance, monthly_payment, next_payment_date, status 
-FROM loans WHERE customer_id = '<customer_id>'
+```json
+{ "customer_id": "<customer_id>", "query_type": "loans" }
 ```
 
 **To get savings goals:**
-```sql
-SELECT name, target_amount, current_amount, target_date, status 
-FROM savings_goals WHERE customer_id = '<customer_id>'
+```json
+{ "customer_id": "<customer_id>", "query_type": "savings_goals" }
 ```
 
 **To get spending by category:**
-```sql
-SELECT category, SUM(amount) as total, COUNT(*) as count
-FROM transactions t
-JOIN accounts a ON t.account_id = a.id
-WHERE a.customer_id = '<customer_id>'
-AND t.type = 'debit'
-AND t.date >= NOW() - INTERVAL '30 days'
-GROUP BY category
-ORDER BY total DESC
+```json
+{ "customer_id": "<customer_id>", "query_type": "spending_summary" }
 ```
 
-**ALWAYS use execute_sql to get real data. NEVER make up or guess account balances or transaction data.**
+**ALWAYS use get_banking_data to fetch real data. NEVER make up or guess account balances or transaction data.**
 
-## Core Tables
+## Available Data (via get_banking_data)
 
-- profiles(id, customer_id, full_name, email, phone)
-- customers(id, name, tier, preferred_language)
-- accounts(customer_id, balance, available_balance, account_number, type, currency)
-- transactions(account_id, date, merchant, category, amount, type, status)
-- cards(customer_id, account_id, last_four, status, credit_limit)
-- loans(customer_id, principal_amount, remaining_balance, monthly_payment, status)
-- savings_goals(customer_id, target_amount, current_amount, status, source_account_id)
-- savings_goal_transactions(goal_id, amount, type)
-- portfolio_holdings(customer_id, symbol, quantity, avg_cost, current_price)
-- reward_profiles(customer_id, total_points, tier)
-- reward_activities(customer_id, amount, type, category)
-- reward_redemptions(customer_id, points_spent, status)
-- risk_profiles(customer_id, score, category)
-- budgets(customer_id, category, amount, period)
-- policies(title, category, content)
+The `get_banking_data` function returns data in these formats:
+
+**accounts** returns: id, name, account_type, balance, currency, status
+**transactions** returns: id, description, amount, currency, type, category, status, created_at, merchant_name
+**cards** returns: id, card_type, card_number, cardholder_name, expiry_date, status, credit_limit, current_balance
+**loans** returns: id, loan_type, principal_amount, remaining_balance, interest_rate, monthly_payment, status, next_payment_date
+**savings_goals** returns: id, name, target_amount, current_amount, target_date, status, category
+**investments** returns: id, investment_type, symbol, name, quantity, purchase_price, current_price, currency
+**spending_summary** returns: period, total_spent, breakdown (array of {category, amount, percentage})
 
 ## Sample Interactions
 
 **Customer**: "What's my balance?"
 **Internal process**:
-1. Call `resolve_current_user` with `profile_id={{userId}}`
+1. Call `resolve_current_user` with `{ "profile_id": "{{userId}}" }`
 2. Get `customer_id` from response (e.g., "4e140685-8f38-49ff-aae0-d6109c46873d")
-3. Call `execute_sql` with: `SELECT name, type, balance, currency FROM accounts WHERE customer_id = '4e140685-8f38-49ff-aae0-d6109c46873d'`
-4. Read the actual balances from the query result
+3. Call `get_banking_data` with `{ "customer_id": "4e140685-8f38-49ff-aae0-d6109c46873d", "query_type": "accounts" }`
+4. Read the actual balances from the response data array
 **You**: "Hi {{customer_name}}! Your Primary Current Account has 44,550 dirhams. You also have 125,000 in your High Yield Savings and 5,200 dollars in your USD Travel Wallet. Would you like more details on any of these?"
 
 **Customer**: "How much did I spend on groceries?"
+**Internal process**:
+1. Call `resolve_current_user` to get customer_id
+2. Call `get_banking_data` with `{ "customer_id": "<id>", "query_type": "spending_summary" }`
+3. Find the "Groceries" category in the breakdown
 **You**: "Let me check... This month, you've spent 1,850 dirhams on groceries across 8 transactions. Most of that was at Carrefour and Spinneys. Would you like me to compare this to last month?"
+
+**Customer**: "Show me my recent transactions"
+**Internal process**:
+1. Call `resolve_current_user` to get customer_id
+2. Call `get_banking_data` with `{ "customer_id": "<id>", "query_type": "transactions", "limit": 5 }`
+**You**: "Here are your last 5 transactions: [read from actual data]. Would you like to see more?"
 
 **Customer**: "I need to speak to someone"
 **You**: "Of course, I understand. I'll connect you with one of our support specialists right away. Before I do, is there any specific information I should pass along to them?"
@@ -205,20 +216,27 @@ ORDER BY total DESC
 
 5. **End Call Silence Threshold**: 5-10 seconds - Give customers time to think
 
-### MCP Configuration
+### Custom Functions Configuration
 
-When setting up the Supabase MCP in Retell:
+Instead of using Supabase MCP directly (which requires OAuth that Retell doesn't support), use these two custom functions:
 
-1. **Connection URL**: Use your `NEXT_PUBLIC_BANKING_SUPABASE_URL`
-2. **API Key**: Use a service role key (not the anon key) for full data access
-3. **Tables to expose**:
-   - `profiles` (customer info)
-   - `accounts` (bank accounts)
-   - `transactions` (transaction history)
-   - `cards` (card details)
-   - `loans` (loan information)
-   - `investments` (portfolio data)
-   - `savings_goals` (goals tracking)
+#### 1. resolve_current_user
+- **URL**: `https://your-domain.vercel.app/api/retell/current-user`
+- **Method**: POST
+- **Payload**: Args only
+- **Parameters**:
+  - `profile_id` (string, required): The user's profile ID from {{userId}}
+- **Response Variable**: `customer_id` with path `$.customer_id`
+
+#### 2. get_banking_data
+- **URL**: `https://your-domain.vercel.app/api/retell/banking-data`
+- **Method**: POST
+- **Payload**: Args only
+- **Parameters**:
+  - `customer_id` (string, required): The customer ID from resolve_current_user
+  - `query_type` (string, required): One of: accounts, transactions, cards, loans, savings_goals, investments, spending_summary
+  - `limit` (number, optional): Number of records for transactions (default: 10)
+- **Response**: Returns `{ success: true, data: [...], count: N }`
 
 ### Webhook Configuration (Optional)
 
@@ -251,16 +269,20 @@ Before going live, test these scenarios:
 ## Troubleshooting
 
 ### Agent not accessing data / Making up balances
-- **Verify MCP is connected**: In Retell dashboard, check that the Supabase MCP shows as "Connected"
-- **Check MCP project reference**: The MCP URL must use your correct Supabase project ref: `anltobzjhkgwyachuuqw`
-- **Verify execute_sql tool is available**: The agent needs access to the `execute_sql` tool from the MCP
-- **Check the system prompt**: Make sure it explicitly tells the agent to use `execute_sql` queries
-- **Test MCP directly**: Try calling execute_sql manually in Retell's test interface
+- **Verify both custom functions are configured**: You need BOTH `resolve_current_user` AND `get_banking_data`
+- **Check function URLs**: Make sure URLs point to your deployed app (not localhost)
+- **Test functions manually**: Use Retell's test interface to call each function directly
+- **Check the system prompt**: Make sure it tells the agent to use `get_banking_data` after `resolve_current_user`
 
-### Agent calls resolve_current_user but not execute_sql
-- The system prompt must explicitly tell the agent to call `execute_sql` with SQL queries
-- Add example SQL queries to the prompt (see "How to Query Data" section above)
-- Make sure the MCP tools are visible to the agent in the dashboard
+### Agent calls resolve_current_user but not get_banking_data
+- The agent might not know about the second function
+- Ensure `get_banking_data` is added as a custom function in Retell
+- The system prompt must explicitly tell the agent to call `get_banking_data` with the customer_id
+
+### Function returns errors
+- Check your Vercel logs for error details
+- Verify environment variables are set in Vercel: `NEXT_PUBLIC_BANKING_SUPABASE_URL` and `NEXT_PUBLIC_BANKING_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
+- Test the API endpoint directly with curl or Postman
 
 ### Poor voice quality
 - Check sample rate settings (24000 Hz recommended)
