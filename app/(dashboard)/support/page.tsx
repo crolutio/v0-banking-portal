@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { isCustomer, useRole } from "@/lib/role-context"
+import { useRole } from "@/lib/role-context"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import {
@@ -74,7 +74,6 @@ export default function SupportPage() {
 
   const { conversations, refresh } = useCustomerConversations({
     customerId: customerId || "",
-    showAll: !isCustomer(currentRole),
   })
 
   const { messages, send, waitingForReply } = useConversationMessages({

@@ -48,15 +48,6 @@ export function useCustomerConversations(params: {
         return;
       }
 
-      if (!showAll && (data?.length ?? 0) === 0) {
-        const { data: fallback, error: fallbackError } = await query;
-        if (!fallbackError) {
-          setConversations((fallback ?? []) as DbConversation[]);
-          return;
-        }
-        console.error("[useCustomerConversations] fallback error", fallbackError);
-      }
-
       setConversations((data ?? []) as DbConversation[]);
     } catch (err) {
       console.error("[useCustomerConversations] unexpected error:", err);

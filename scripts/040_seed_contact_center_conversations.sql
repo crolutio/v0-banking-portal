@@ -13,6 +13,44 @@ SET source = 'banking_archived',
     last_message_time = NOW()
 WHERE source = 'banking';
 
+-- Ensure anon can read banking demo conversations/messages
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'conversations'
+      AND policyname = 'banking_select_conversations'
+  ) THEN
+    CREATE POLICY banking_select_conversations
+      ON conversations
+      FOR SELECT
+      TO anon
+      USING (source = 'banking');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'messages'
+      AND policyname = 'banking_select_messages'
+  ) THEN
+    CREATE POLICY banking_select_messages
+      ON messages
+      FOR SELECT
+      TO anon
+      USING (source = 'banking');
+  END IF;
+END $$;
+
 -- Remove stray single-message conversation
 DELETE FROM messages
 WHERE source IN ('banking', 'banking_archived')
@@ -142,12 +180,16 @@ INSERT INTO conversations (
 
 -- Ensure re-runs are safe
 ON CONFLICT (id) DO UPDATE SET
+  customer_id = EXCLUDED.customer_id,
   subject = EXCLUDED.subject,
+  channel = EXCLUDED.channel,
   status = EXCLUDED.status,
   priority = EXCLUDED.priority,
   assigned_agent_id = EXCLUDED.assigned_agent_id,
   last_message = EXCLUDED.last_message,
+  created_at = EXCLUDED.created_at,
   updated_at = EXCLUDED.updated_at,
+  source = EXCLUDED.source,
   handover_required = EXCLUDED.handover_required,
   provider = EXCLUDED.provider,
   provider_conversation_id = EXCLUDED.provider_conversation_id,
