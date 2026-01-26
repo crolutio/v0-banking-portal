@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useChat } from "ai/react"
+import type { Message } from "ai"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -611,7 +612,7 @@ export function FloatingChatBubble() {
     const baseMessages = messagesRef.current.slice(0, baseIndex)
     const voiceIdBase = voiceCallIdRef.current ?? callId ?? "active"
 
-    const voiceMessages = transcript.map((msg, index) => ({
+    const voiceMessages: Message[] = transcript.map((msg, index) => ({
       id: `retell-${voiceIdBase}-${index}`,
       role: msg.role === "user" ? "user" : "assistant",
       content: msg.content,
