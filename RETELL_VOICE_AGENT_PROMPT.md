@@ -95,9 +95,64 @@ If asked about:
 ## Data Access Rules
 
 1. **Always start** by calling `resolve_current_user` with `profile_id` = `{{userId}}`
-2. Use the returned `customer_id` to query all banking tables
+2. Use the returned `customer_id` to query all banking tables via the Supabase MCP
 3. **NEVER** ask the user for ID - it's already in `{{userId}}`
 4. If the function fails, say: "I'm having trouble accessing your account right now. Let me connect you with support."
+
+## How to Query Data (IMPORTANT!)
+
+You have access to the Supabase MCP which provides the `execute_sql` tool. Use this to query the database.
+
+**Step 1**: Get the customer_id by calling `resolve_current_user` with `profile_id` = `{{userId}}`
+
+**Step 2**: Use the `execute_sql` tool to query data. Examples:
+
+**To get account balances:**
+```sql
+SELECT name, type, balance, currency FROM accounts WHERE customer_id = '<customer_id>'
+```
+
+**To get recent transactions:**
+```sql
+SELECT t.date, t.merchant, t.amount, t.category, t.type 
+FROM transactions t
+JOIN accounts a ON t.account_id = a.id
+WHERE a.customer_id = '<customer_id>'
+ORDER BY t.date DESC
+LIMIT 10
+```
+
+**To get card details:**
+```sql
+SELECT type, brand, last_four, status, credit_limit, spent_amount 
+FROM cards WHERE customer_id = '<customer_id>'
+```
+
+**To get loan information:**
+```sql
+SELECT type, principal_amount, remaining_balance, monthly_payment, next_payment_date, status 
+FROM loans WHERE customer_id = '<customer_id>'
+```
+
+**To get savings goals:**
+```sql
+SELECT name, target_amount, current_amount, target_date, status 
+FROM savings_goals WHERE customer_id = '<customer_id>'
+```
+
+**To get spending by category:**
+```sql
+SELECT category, SUM(amount) as total, COUNT(*) as count
+FROM transactions t
+JOIN accounts a ON t.account_id = a.id
+WHERE a.customer_id = '<customer_id>'
+AND t.type = 'debit'
+AND t.date >= NOW() - INTERVAL '30 days'
+GROUP BY category
+ORDER BY total DESC
+```
+
+**ALWAYS use execute_sql to get real data. NEVER make up or guess account balances or transaction data.**
 
 ## Core Tables
 
@@ -120,8 +175,12 @@ If asked about:
 ## Sample Interactions
 
 **Customer**: "What's my balance?"
-**You** (internally): [Call resolve_current_user with profile_id={{userId}}] → Get customer_id → Query accounts table
-**You**: "Hi {{customer_name}}! Your main checking account has 12,450 dirhams. You also have 45,000 in savings. Would you like more details on any of these?"
+**Internal process**:
+1. Call `resolve_current_user` with `profile_id={{userId}}`
+2. Get `customer_id` from response (e.g., "4e140685-8f38-49ff-aae0-d6109c46873d")
+3. Call `execute_sql` with: `SELECT name, type, balance, currency FROM accounts WHERE customer_id = '4e140685-8f38-49ff-aae0-d6109c46873d'`
+4. Read the actual balances from the query result
+**You**: "Hi {{customer_name}}! Your Primary Current Account has 44,550 dirhams. You also have 125,000 in your High Yield Savings and 5,200 dollars in your USD Travel Wallet. Would you like more details on any of these?"
 
 **Customer**: "How much did I spend on groceries?"
 **You**: "Let me check... This month, you've spent 1,850 dirhams on groceries across 8 transactions. Most of that was at Carrefour and Spinneys. Would you like me to compare this to last month?"
@@ -191,10 +250,17 @@ Before going live, test these scenarios:
 
 ## Troubleshooting
 
-### Agent not accessing data
-- Verify MCP connection is active in Retell dashboard
-- Check that the Supabase API key has correct permissions
-- Ensure the user_id dynamic variable is being passed
+### Agent not accessing data / Making up balances
+- **Verify MCP is connected**: In Retell dashboard, check that the Supabase MCP shows as "Connected"
+- **Check MCP project reference**: The MCP URL must use your correct Supabase project ref: `anltobzjhkgwyachuuqw`
+- **Verify execute_sql tool is available**: The agent needs access to the `execute_sql` tool from the MCP
+- **Check the system prompt**: Make sure it explicitly tells the agent to use `execute_sql` queries
+- **Test MCP directly**: Try calling execute_sql manually in Retell's test interface
+
+### Agent calls resolve_current_user but not execute_sql
+- The system prompt must explicitly tell the agent to call `execute_sql` with SQL queries
+- Add example SQL queries to the prompt (see "How to Query Data" section above)
+- Make sure the MCP tools are visible to the agent in the dashboard
 
 ### Poor voice quality
 - Check sample rate settings (24000 Hz recommended)
