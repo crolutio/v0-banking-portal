@@ -18,26 +18,45 @@ export async function POST(request: NextRequest) {
     const headersUserId = request.headers.get("x-user-id")
 
     let body: Record<string, unknown> = {}
+    let args: Record<string, unknown> = {}
     try {
       const text = await request.text()
-      console.log("[Retell API] Raw request body:", text)
+      console.log("[Retell API] Raw request body:", text?.substring(0, 500))
       if (text) {
         body = JSON.parse(text)
+        
+        // Handle both formats:
+        // 1. Args only: { customer_id, profile_id }
+        // 2. Full payload: { call_id, ..., args: { customer_id, profile_id } }
+        //    or with retell_llm_dynamic_variables
+        if (body.args && typeof body.args === "object") {
+          // Full payload format - extract args
+          args = body.args as Record<string, unknown>
+          console.log("[Retell API] Extracted args from full payload:", JSON.stringify(args))
+        } else if (body.retell_llm_dynamic_variables && typeof body.retell_llm_dynamic_variables === "object") {
+          // Full payload with dynamic variables - use those
+          args = body.retell_llm_dynamic_variables as Record<string, unknown>
+          console.log("[Retell API] Using retell_llm_dynamic_variables:", JSON.stringify(args))
+        } else {
+          // Args only format
+          args = body
+          console.log("[Retell API] Using body directly as args")
+        }
       }
     } catch (parseError) {
       console.log("[Retell API] Body parse error:", parseError)
       // empty body is fine
     }
 
-    console.log("[Retell API] Parsed body:", JSON.stringify(body))
+    console.log("[Retell API] Final args:", JSON.stringify(args))
     console.log("[Retell API] Headers - profile_id:", headersProfileId, "customer_id:", headersCustomerId, "user_id:", headersUserId)
 
-    // Extract values, handling null explicitly
-    const customerId = getString(body.customer_id) || getString(headersCustomerId)
+    // Extract values from args, handling null explicitly
+    const customerId = getString(args.customer_id) || getString(headersCustomerId)
     const profileId =
-      getString(body.profile_id) ||
-      getString(body.user_id) ||
-      getString(body.userId) ||
+      getString(args.profile_id) ||
+      getString(args.user_id) ||
+      getString(args.userId) ||
       getString(headersProfileId) ||
       getString(headersUserId)
 
@@ -60,8 +79,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "profile_id or customer_id is required",
-          received_body: body,
-          received_headers: { headersProfileId, headersCustomerId, headersUserId },
+          extracted_args: args,
+          had_nested_args: !!body.args,
+          had_dynamic_vars: !!body.retell_llm_dynamic_variables,
         },
         { status: 400 }
       )
