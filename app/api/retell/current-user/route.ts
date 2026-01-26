@@ -8,8 +8,14 @@ export async function POST(request: NextRequest) {
   try {
     const headersProfileId = request.headers.get("x-profile-id")
     const headersCustomerId = request.headers.get("x-customer-id")
+    const headersUserId = request.headers.get("x-user-id")
 
-    let body: { profile_id?: string; customer_id?: string } = {}
+    let body: {
+      profile_id?: string
+      customer_id?: string
+      user_id?: string
+      userId?: string
+    } = {}
     try {
       body = await request.json()
     } catch {
@@ -17,7 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     const customerId = body.customer_id || headersCustomerId || ""
-    const profileId = body.profile_id || headersProfileId || ""
+    const profileId =
+      body.profile_id || body.user_id || body.userId || headersProfileId || headersUserId || ""
 
     if (customerId) {
       return NextResponse.json({

@@ -586,6 +586,7 @@ export function FloatingChatBubble() {
     dynamicVariables: {
       customer_name: currentUser?.name || "Customer",
       user_id: currentBankingUserId || "",
+      userId: currentBankingUserId || "",
       customer_id: currentBankingUserId || "",
       profile_id: currentUser?.id || "",
     },

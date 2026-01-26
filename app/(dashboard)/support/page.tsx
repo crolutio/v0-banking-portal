@@ -732,6 +732,10 @@ export default function SupportPage() {
                         dynamicVariables={{
                           customer_name: currentUser?.name || "Customer",
                           ticket_subject: selectedConversation?.subject || "Support request",
+                          user_id: currentUser?.id || "",
+                          userId: currentUser?.id || "",
+                          profile_id: currentUser?.id || "",
+                          customer_id: "",
                         }}
                       />
                       <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
