@@ -21,9 +21,17 @@ export interface UseRetellVoiceOptions {
    */
   dynamicVariables?: Record<string, string>
   /**
-   * Callback when a message is received (user or agent)
+   * Callback when a message is received (user or agent) - fires on every incremental update
    */
   onMessage?: (message: TranscriptMessage) => void
+  /**
+   * Callback when a user finishes their turn (complete message, not incremental)
+   */
+  onUserTurnComplete?: (message: TranscriptMessage) => void
+  /**
+   * Callback when an agent finishes their turn (complete message, not incremental)
+   */
+  onAgentTurnComplete?: (message: TranscriptMessage) => void
   /**
    * Callback when the call starts
    */
@@ -86,12 +94,16 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     metadata,
     dynamicVariables,
     onMessage,
+    onUserTurnComplete,
+    onAgentTurnComplete,
     onCallStart,
     onCallEnd,
     onError,
   } = options
 
   const onMessageRef = useRef(onMessage)
+  const onUserTurnCompleteRef = useRef(onUserTurnComplete)
+  const onAgentTurnCompleteRef = useRef(onAgentTurnComplete)
   const onCallStartRef = useRef(onCallStart)
   const onCallEndRef = useRef(onCallEnd)
   const onErrorRef = useRef(onError)
@@ -111,6 +123,14 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
   useEffect(() => {
     onMessageRef.current = onMessage
   }, [onMessage])
+
+  useEffect(() => {
+    onUserTurnCompleteRef.current = onUserTurnComplete
+  }, [onUserTurnComplete])
+
+  useEffect(() => {
+    onAgentTurnCompleteRef.current = onAgentTurnComplete
+  }, [onAgentTurnComplete])
 
   useEffect(() => {
     onCallStartRef.current = onCallStart
@@ -143,6 +163,17 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     client.on("call_ended", () => {
       console.log("[Retell Hook] Call ended")
       const finalTranscript = [...transcriptRef.current]
+      
+      // Fire turn complete for the last message if there is one
+      if (finalTranscript.length > 0) {
+        const lastMessage = finalTranscript[finalTranscript.length - 1]
+        if (lastMessage.role === "user") {
+          onUserTurnCompleteRef.current?.(lastMessage)
+        } else if (lastMessage.role === "agent") {
+          onAgentTurnCompleteRef.current?.(lastMessage)
+        }
+      }
+      
       setIsConnected(false)
       setIsConnecting(false)
       setIsSpeaking(false)
@@ -160,6 +191,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     client.on("update", (update: { transcript?: Array<{ role: string; content: string }> }) => {
       if (update.transcript && update.transcript.length > 0) {
         const previous = lastTranscriptRef.current
+        const previousLength = previous.length
         const newMessages: TranscriptMessage[] = update.transcript.map((msg, index) => {
           const role = msg.role as "agent" | "user"
           const previousMessage = transcriptRef.current[index]
@@ -176,7 +208,19 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
         setTranscript(newMessages)
         transcriptRef.current = newMessages
 
-        // Notify about new or updated messages
+        // Detect turn completion: when a new message is added, the previous message is complete
+        if (update.transcript.length > previousLength && previousLength > 0) {
+          const completedMessage = transcriptRef.current[previousLength - 1]
+          if (completedMessage) {
+            if (completedMessage.role === "user") {
+              onUserTurnCompleteRef.current?.(completedMessage)
+            } else if (completedMessage.role === "agent") {
+              onAgentTurnCompleteRef.current?.(completedMessage)
+            }
+          }
+        }
+
+        // Notify about new or updated messages (incremental)
         for (let i = 0; i < newMessages.length; i++) {
           const previousMessage = previous[i]
           const nextMessage = newMessages[i]

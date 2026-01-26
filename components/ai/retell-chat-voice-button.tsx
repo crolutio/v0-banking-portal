@@ -9,13 +9,22 @@ import { useRetellVoice, type TranscriptMessage } from "@/lib/hooks/useRetellVoi
 
 interface RetellChatVoiceButtonProps {
   /**
-   * Callback to send a message to the chat (for the user's speech)
+   * Callback for incremental user speech updates (fires on every word)
    */
   onUserMessage?: (text: string) => void
   /**
-   * Callback to add an AI message to the chat (for the agent's response)
+   * Callback for incremental agent speech updates (fires on every word)
    */
   onAgentMessage?: (text: string) => void
+  /**
+   * Callback when user finishes speaking (complete message, not incremental)
+   * Use this for sending messages to a chat/database
+   */
+  onUserTurnComplete?: (text: string) => void
+  /**
+   * Callback when agent finishes speaking (complete message, not incremental)
+   */
+  onAgentTurnComplete?: (text: string) => void
   /**
    * Optional callback when call ends with full transcript
    */
@@ -48,6 +57,10 @@ interface RetellChatVoiceButtonProps {
    * Show expanded view with status and transcript
    */
   showExpanded?: boolean
+  /**
+   * Whether the button is disabled
+   */
+  disabled?: boolean
 }
 
 /**
@@ -62,6 +75,8 @@ interface RetellChatVoiceButtonProps {
 export function RetellChatVoiceButton({
   onUserMessage,
   onAgentMessage,
+  onUserTurnComplete,
+  onAgentTurnComplete,
   onCallEnd,
   agentId,
   metadata,
@@ -70,6 +85,7 @@ export function RetellChatVoiceButton({
   size = "icon",
   className,
   showExpanded = false,
+  disabled = false,
 }: RetellChatVoiceButtonProps) {
   // Track the last processed message content to avoid duplicates
   const [lastUserContent, setLastUserContent] = useState<string>("")
@@ -91,6 +107,14 @@ export function RetellChatVoiceButton({
     }
   }, [lastUserContent, lastAgentContent, onUserMessage, onAgentMessage])
 
+  const handleUserTurnComplete = useCallback((message: TranscriptMessage) => {
+    onUserTurnComplete?.(message.content)
+  }, [onUserTurnComplete])
+
+  const handleAgentTurnComplete = useCallback((message: TranscriptMessage) => {
+    onAgentTurnComplete?.(message.content)
+  }, [onAgentTurnComplete])
+
   const handleCallEnd = useCallback((transcript: TranscriptMessage[]) => {
     // Reset tracking state
     setLastUserContent("")
@@ -110,6 +134,8 @@ export function RetellChatVoiceButton({
     metadata,
     dynamicVariables,
     onMessage: handleMessage,
+    onUserTurnComplete: handleUserTurnComplete,
+    onAgentTurnComplete: handleAgentTurnComplete,
     onCallEnd: handleCallEnd,
   })
 
@@ -132,6 +158,9 @@ export function RetellChatVoiceButton({
 
   // Simple button mode
   if (!showExpanded) {
+    if (disabled) {
+      return null // Don't render when disabled
+    }
     return (
       <Button
         type="button"

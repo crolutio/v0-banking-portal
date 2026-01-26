@@ -714,30 +714,33 @@ export default function SupportPage() {
                         }}
                       />
                       {/* Retell Voice Button - sends transcripts to chat */}
-                      <RetellChatVoiceButton
-                        onUserMessage={(text) => {
-                          // Send user's voice message to the conversation
-                          send(text).catch(console.error)
-                        }}
-                        onAgentMessage={(text) => {
-                          // Agent responses are shown in real-time via the voice
-                          // Optionally log or track them
-                          console.log("[Voice Agent]", text)
-                        }}
-                        metadata={{
-                          conversationId: selectedConversation?.id,
-                          customerId: customerId,
-                          subject: selectedConversation?.subject,
-                        }}
-                        dynamicVariables={{
-                          customer_name: currentUser?.name || "Customer",
-                          ticket_subject: selectedConversation?.subject || "Support request",
-                          user_id: currentUser?.id || "",
-                          userId: currentUser?.id || "",
-                          profile_id: currentUser?.id || "",
-                          customer_id: "",
-                        }}
-                      />
+                      {/* Hide voice button when escalated (human-only mode) */}
+                      {selectedConversation?.status !== "escalated" && !selectedConversation?.handover_required && (
+                        <RetellChatVoiceButton
+                          onUserTurnComplete={(text) => {
+                            // Send user's complete voice message to the conversation
+                            send(text).catch(console.error)
+                          }}
+                          onAgentTurnComplete={(text) => {
+                            // Agent responses are shown in real-time via the voice
+                            // Optionally log or track them
+                            console.log("[Voice Agent Complete]", text)
+                          }}
+                          metadata={{
+                            conversationId: selectedConversation?.id,
+                            customerId: customerId,
+                            subject: selectedConversation?.subject,
+                          }}
+                          dynamicVariables={{
+                            customer_name: currentUser?.name || "Customer",
+                            ticket_subject: selectedConversation?.subject || "Support request",
+                            user_id: currentUser?.id || "",
+                            userId: currentUser?.id || "",
+                            profile_id: currentUser?.id || "",
+                            customer_id: "",
+                          }}
+                        />
+                      )}
                       <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
                         <Send className="h-4 w-4" />
                       </Button>
@@ -760,7 +763,10 @@ export default function SupportPage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-8 text-center">
-                      AI will try to help first. Click <Mic className="h-3 w-3 inline" /> for voice, or "Escalate" to speak with a human.
+                      {selectedConversation?.status === "escalated" || selectedConversation?.handover_required
+                        ? "You're now connected with a human agent. Voice mode is disabled."
+                        : <>AI will try to help first. Click <Mic className="h-3 w-3 inline" /> for voice, or &quot;Escalate&quot; to speak with a human.</>
+                      }
                     </p>
                   </div>
                 </>
