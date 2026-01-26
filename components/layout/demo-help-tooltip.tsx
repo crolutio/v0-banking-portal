@@ -33,6 +33,14 @@ const demoTips: Record<string, DemoTip> = {
       { 
         prompt: "Forecast my expenses for next month",
         description: "Predictive analytics"
+      },
+      {
+        prompt: "Review suspicious transactions",
+        description: "Flagged activity overview"
+      },
+      {
+        prompt: "I need to dispute a Starbucks charge",
+        description: "Dispute workflow with confirmation card"
       }
     ]
   },
@@ -48,6 +56,16 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "Request a new loan for 50,000 AED",
         agentId: "loan_advisor",
         description: "📊 Pre-Approval Calculator with DTI analysis"
+      },
+      { 
+        prompt: "Show me a payment schedule for a 3-year loan",
+        agentId: "loan_advisor",
+        description: "Payment schedule simulation"
+      },
+      { 
+        prompt: "Tell me about my loan details",
+        agentId: "loan_advisor",
+        description: "Loan details and summary"
       },
       { 
         prompt: "Should I refinance my mortgage?",
@@ -77,6 +95,10 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "Analyze my credit card spending patterns",
         agentId: "spending_analyst",
         description: "Card usage insights"
+      },
+      {
+        prompt: "Review suspicious transactions",
+        description: "Flagged activity overview"
       }
     ]
   },
@@ -84,7 +106,7 @@ const demoTips: Record<string, DemoTip> = {
     title: "Accounts Page Demos",
     tips: [
       { 
-        prompt: "Analyze my spending and find savings",
+        prompt: "Analyze my spending and find savings opportunities",
         agentId: "spending_analyst",
         description: "💰 Spending Optimizer"
       },
@@ -95,6 +117,14 @@ const demoTips: Record<string, DemoTip> = {
       { 
         prompt: "Compare my balance trends over time",
         description: "Balance analytics"
+      },
+      {
+        prompt: "Review suspicious transactions",
+        description: "Flagged activity overview"
+      },
+      {
+        prompt: "I need to dispute a Starbucks charge",
+        description: "Dispute workflow with confirmation card"
       }
     ]
   },

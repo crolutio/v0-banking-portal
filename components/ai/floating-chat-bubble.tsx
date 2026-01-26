@@ -539,10 +539,10 @@ const MessageContent = ({ content, isFullscreen = false }: { content: string; is
 const suggestedPrompts = [
   "I want to take a loan for my Japan trip",
   "Request a new loan for 50,000 AED",
+  "Show me a payment schedule for a 3-year loan",
   "Analyze my spending and find savings opportunities",
   "I'm traveling to London next week",
-  "How much did I spend on restaurants this month?",
-  "Can I afford a 3,000 AED monthly payment?",
+  "Review suspicious transactions",
 ]
 
 export function FloatingChatBubble() {
