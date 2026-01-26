@@ -27,7 +27,9 @@ export function useCustomerConversations(params: {
         .from("conversations")
         .select("*")
         .eq("source", "banking")
-        .order("created_at", { ascending: false });
+        .order("last_message_time", { ascending: false, nullsFirst: false })
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false, nullsFirst: false });
 
       const { data, error } = showAll
         ? await query
@@ -63,7 +65,7 @@ export function useCustomerConversations(params: {
 
     // Realtime subscription (best effort)
     const supabase = createCallCenterClient();
-    const filter = showAll
+    const convFilter = showAll
       ? "source=eq.banking"
       : `customer_id=eq.${customerId}`;
 
@@ -75,10 +77,22 @@ export function useCustomerConversations(params: {
           event: "*",
           schema: "public",
           table: "conversations",
-          filter,
+          filter: convFilter,
         },
         () => {
           // simplest: re-fetch to keep list correct
+          refresh().catch(console.error);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: "source=eq.banking",
+        },
+        () => {
           refresh().catch(console.error);
         }
       )
