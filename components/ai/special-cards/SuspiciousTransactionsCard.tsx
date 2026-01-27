@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Shield } from "lucide-react"
+import { AlertTriangle, MessageCircle, Shield } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
 
@@ -24,6 +24,13 @@ interface SuspiciousTransactionsCardProps {
 
 export function SuspiciousTransactionsCard({ data }: SuspiciousTransactionsCardProps) {
   const { openChatWithMessage } = useFloatingChat()
+
+  const handleReview = (transaction: SuspiciousTransaction) => {
+    const message = `Review this transaction: ${transaction.description} for ${formatCurrency(transaction.amount)} on ${formatDate(transaction.date)}.`
+    setTimeout(() => {
+      openChatWithMessage(message)
+    }, 100)
+  }
 
   const handleDispute = (transaction: SuspiciousTransaction) => {
     const message = `I want to dispute this transaction: ${transaction.description} for ${formatCurrency(transaction.amount)} on ${formatDate(transaction.date)}. ${transaction.reason}`
@@ -71,22 +78,40 @@ export function SuspiciousTransactionsCard({ data }: SuspiciousTransactionsCardP
               <p className="text-sm font-semibold text-foreground">
                 {formatCurrency(tx.amount)}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-3 text-xs border-red-500/30 text-red-600 hover:bg-red-500/10 hover:border-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  if (e.nativeEvent.stopImmediatePropagation) {
-                    e.nativeEvent.stopImmediatePropagation()
-                  }
-                  handleDispute(tx)
-                }}
-              >
-                <Shield className="h-3 w-3 mr-1" />
-                Dispute
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (e.nativeEvent.stopImmediatePropagation) {
+                      e.nativeEvent.stopImmediatePropagation()
+                    }
+                    handleReview(tx)
+                  }}
+                >
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  Review
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-xs border-red-500/30 text-red-600 hover:bg-red-500/10 hover:border-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (e.nativeEvent.stopImmediatePropagation) {
+                      e.nativeEvent.stopImmediatePropagation()
+                    }
+                    handleDispute(tx)
+                  }}
+                >
+                  <Shield className="h-3 w-3 mr-1" />
+                  Dispute
+                </Button>
+              </div>
             </div>
           </div>
         ))}

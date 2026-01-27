@@ -449,6 +449,36 @@ ${JSON.stringify({ transactions: suspiciousTransactions })}
 DO NOT write any explanation text. DO NOT write any introductory text. DO NOT write any follow-up text. ONLY output the code block above.`
       }
     }
+
+    // Handle transaction review scenario
+    if (scenario.type === 'transaction_review') {
+      const reviewDesc = scenario.context?.transactionDescription?.toLowerCase() || ""
+      const matchedTx = transactions.find((tx: any) =>
+        (tx.description || "").toLowerCase().includes(reviewDesc)
+      ) || unusualActivity.find((tx: any) =>
+        (tx.description || "").toLowerCase().includes(reviewDesc)
+      ) || unusualActivity[0] || transactions[0]
+
+      const txDescription = matchedTx?.description || "Nobu London"
+      const txAmount = matchedTx ? toNumber(matchedTx.amount) : 6200
+      const txDate = matchedTx?.date || new Date().toISOString().split("T")[0]
+
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User requested a transaction review.
+
+TRANSACTION DETAILS:
+- Description: ${txDescription}
+- Amount: AED ${txAmount}
+- Date: ${txDate}
+
+INSTRUCTION:
+Ask a single question: "Was this you?"
+Briefly explain that if it was them, you'll approve the charge and optimize their travel card/currency settings. If it wasn't, you'll block the card, create a temporary card, and dispute the charge.
+Include this line verbatim for context tracking:
+Transaction under review: ${txDescription}
+`
+    }
     
     // Handle dispute transaction scenario
     if (scenario.type === 'dispute_transaction') {
@@ -494,6 +524,40 @@ ${JSON.stringify(disputeData)}
 Message tone: Supportive, reassuring, professional. Confirm that the card has been blocked, dispute initiated, and new card will be issued.`
       }
     }
+
+    // Handle transaction confirmation scenario
+    if (scenario.type === 'transaction_confirmation') {
+      const decision = scenario.context?.transactionDecision
+      const reviewedTx = scenario.context?.transactionDescription || "Nobu London"
+
+      if (decision === "approved") {
+        scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User confirmed the transaction was legitimate.
+
+INSTRUCTION:
+Confirm the charge is approved, then mention three actions completed:
+1) Switched the charge to a card with no foreign transaction fees.
+2) Processed the transaction successfully.
+3) Switched the card/account currency to GBP for the trip to avoid foreign interest/fees.
+
+Reference the transaction by name: ${reviewedTx}. Keep the response short and confident.`
+      }
+
+      if (decision === "blocked") {
+        scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User denied the transaction.
+
+INSTRUCTION:
+Confirm three actions completed immediately:
+1) Card blocked to prevent further charges.
+2) Temporary digital card created so the customer can still access funds.
+3) Dispute opened automatically for the transaction.
+
+Reference the transaction by name: ${reviewedTx}. Keep the response reassuring and action-oriented.`
+      }
+    }
     
     // Handle travel context scenario - "The Concierge"
     if (scenario.type === 'travel_context') {
@@ -509,6 +573,48 @@ INSTRUCTION: Act as "The Concierge" - provide travel-specific financial advice:
 - Remind about expense tracking while abroad
 
 Message tone: Friendly, knowledgeable, proactive.`
+    }
+
+    // Handle overdraft warning scenario
+    if (scenario.type === 'overdraft_warning') {
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: Overdraft prevention notification.
+
+INSTRUCTION:
+Explain that a monthly bill was projected to overdraft the account.
+State that AED 1,500 was moved from savings to cover it, and it will be automatically returned after the next salary credit.
+Emphasize that no fees were charged and no action is required.
+Message tone: Proactive, calm, reassuring.`
+    }
+
+    // Handle market shock protection scenario
+    if (scenario.type === 'market_shock_protection') {
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: Market shock protection activated.
+
+INSTRUCTION:
+Explain three automated actions:
+1) Shifted 12% of the portfolio into low-volatility ETFs.
+2) Added a temporary hedge to reduce drawdown risk.
+3) Scheduled an automatic review in 7 days and will unwind the hedge when volatility normalizes.
+Message tone: Confident, professional, risk-aware.`
+    }
+
+    // Handle savings goal acceleration scenario
+    if (scenario.type === 'goal_acceleration') {
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: Japan trip goal acceleration.
+
+INSTRUCTION:
+Explain that the goal was accelerated by 4 weeks without lifestyle changes.
+Mention three actions:
+1) Reallocated unused subscriptions and round-ups into the goal.
+2) Set an 8% payday sweep into the goal.
+3) Auto-pauses the sweep if cashflow dips.
+Message tone: Encouraging, proactive, efficient.`
     }
 
     // Add page context awareness

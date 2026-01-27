@@ -23,128 +23,33 @@ interface DemoTip {
 }
 
 const demoTips: Record<string, DemoTip> = {
-  "/home": {
-    title: "Home Page Demos",
-    tips: [
-      { 
-        prompt: "Show me my spending breakdown for this month",
-        description: "View categorized spending analysis"
-      },
-      { 
-        prompt: "Forecast my expenses for next month",
-        description: "Predictive analytics"
-      },
-      {
-        prompt: "Review suspicious transactions",
-        description: "Flagged activity overview"
-      },
-      {
-        prompt: "I need to dispute a Starbucks charge",
-        description: "Dispute workflow with confirmation card"
-      }
-    ]
-  },
-  "/loans": {
-    title: "Loans Page Demos",
-    tips: [
-      { 
-        prompt: "I want to take a loan for my Japan trip",
-        agentId: "spending_analyst",
-        description: "🎯 The Strategist - Finds savings instead of loan"
-      },
-      { 
-        prompt: "Request a new loan for 50,000 AED",
-        agentId: "loan_advisor",
-        description: "📊 Pre-Approval Calculator with DTI analysis"
-      },
-      { 
-        prompt: "Show me a payment schedule for a 3-year loan",
-        agentId: "loan_advisor",
-        description: "Payment schedule simulation"
-      },
-      { 
-        prompt: "Tell me about my loan details",
-        agentId: "loan_advisor",
-        description: "Loan details and summary"
-      },
-      { 
-        prompt: "Should I refinance my mortgage?",
-        agentId: "loan_advisor",
-        description: "Loan optimization advice"
-      },
-      { 
-        prompt: "What's my debt-to-income ratio?",
-        agentId: "loan_advisor",
-        description: "Financial health assessment"
-      }
-    ]
-  },
   "/cards": {
-    title: "Cards Page Demos",
+    title: "Cards Demos",
     tips: [
       { 
-        prompt: "I'm traveling to London next week",
-        agentId: "banker",
-        description: "🌍 The Concierge - Travel card recommendations"
-      },
-      { 
-        prompt: "Which card should I use for online shopping?",
-        description: "Card benefits comparison"
-      },
-      { 
-        prompt: "Analyze my credit card spending patterns",
-        agentId: "spending_analyst",
-        description: "Card usage insights"
-      },
-      {
         prompt: "Review suspicious transactions",
-        description: "Flagged activity overview"
+        agentId: "banker",
+        description: "Nobu London verification with auto card actions"
       }
     ]
   },
   "/accounts": {
-    title: "Accounts Page Demos",
+    title: "Accounts Demos",
     tips: [
       { 
-        prompt: "Analyze my spending and find savings opportunities",
-        agentId: "spending_analyst",
-        description: "💰 Spending Optimizer"
-      },
-      { 
-        prompt: "What are my recurring payments?",
-        description: "Subscription audit"
-      },
-      { 
-        prompt: "Compare my balance trends over time",
-        description: "Balance analytics"
-      },
-      {
-        prompt: "Review suspicious transactions",
-        description: "Flagged activity overview"
-      },
-      {
-        prompt: "I need to dispute a Starbucks charge",
-        description: "Dispute workflow with confirmation card"
+        prompt: "Explain the overdraft warning",
+        agentId: "banker",
+        description: "Auto-transfer from savings, reversed on payday"
       }
     ]
   },
   "/investments": {
-    title: "Investments Page Demos",
+    title: "Investments Demos",
     tips: [
       { 
-        prompt: "Analyze my portfolio performance",
+        prompt: "Explain the market-shock protection you activated",
         agentId: "investmentor",
-        description: "Investment strategy review"
-      },
-      { 
-        prompt: "What's my asset allocation?",
-        agentId: "investmentor",
-        description: "Portfolio breakdown"
-      },
-      { 
-        prompt: "Should I rebalance my portfolio?",
-        agentId: "investmentor",
-        description: "Rebalancing recommendations"
+        description: "Auto risk shift, hedge, and scheduled unwind"
       }
     ]
   },
@@ -152,32 +57,19 @@ const demoTips: Record<string, DemoTip> = {
     title: "Savings Goals Demos",
     tips: [
       { 
-        prompt: "How can I reach my savings goals faster?",
+        prompt: "Auto-boost my Japan trip goal without changing my lifestyle",
         agentId: "savings_coach",
-        description: "Goal acceleration strategies"
-      },
-      { 
-        prompt: "Analyze my spending to boost savings",
-        agentId: "spending_analyst",
-        description: "Savings optimization"
-      },
-      { 
-        prompt: "Am I on track for my vacation goal?",
-        agentId: "savings_coach",
-        description: "Goal progress assessment"
+        description: "Subscriptions + round-ups + payday sweep"
       }
     ]
   },
   "/rewards": {
-    title: "Rewards Page Demos",
+    title: "Rewards Demos",
     tips: [
       { 
-        prompt: "How can I maximize my reward points?",
-        description: "Points optimization"
-      },
-      { 
-        prompt: "What's the best way to redeem my points?",
-        description: "Redemption strategies"
+        prompt: "I'm traveling—maximize my points for this trip",
+        agentId: "banker",
+        description: "Best card, default switch, and redemption"
       }
     ]
   }
@@ -189,10 +81,10 @@ export function DemoHelpTooltip() {
   const { openChatWithMessage } = useFloatingChat()
 
   const currentTips = demoTips[pathname] || {
-    title: "General Demos",
+    title: "Key Demos",
     tips: [
-      { prompt: "What can you help me with?", description: "Explore AI capabilities" },
-      { prompt: "Show me my recent transactions", description: "Transaction history" }
+      { prompt: "Review suspicious transactions", description: "Nobu London verification flow" },
+      { prompt: "Explain the overdraft warning", description: "Auto-transfer from savings, reversed on payday" }
     ]
   }
 

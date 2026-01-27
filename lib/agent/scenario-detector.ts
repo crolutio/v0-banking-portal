@@ -4,7 +4,7 @@
  */
 
 export interface ScenarioDetection {
-  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'payment_schedule' | 'dispute_transaction' | 'review_suspicious_transactions' | 'standard'
+  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'payment_schedule' | 'dispute_transaction' | 'review_suspicious_transactions' | 'transaction_review' | 'transaction_confirmation' | 'overdraft_warning' | 'market_shock_protection' | 'goal_acceleration' | 'standard'
   confidence: number
   context?: {
     travelDestination?: string
@@ -15,6 +15,8 @@ export interface ScenarioDetection {
     clickedLoanId?: string
     transactionDescription?: string
     transactionAmount?: number
+    transactionDate?: string
+    transactionDecision?: "approved" | "blocked"
   }
 }
 
@@ -64,6 +66,18 @@ export function detectScenario(
     return reviewSuspiciousDetection
   }
 
+  // Check for transaction review request
+  const transactionReviewDetection = detectTransactionReview(lowerMessage)
+  if (transactionReviewDetection.confidence > 0.7) {
+    return transactionReviewDetection
+  }
+
+  // Check for transaction confirmation follow-up
+  const transactionConfirmation = detectTransactionConfirmation(lowerMessage, conversationHistory)
+  if (transactionConfirmation.confidence > 0.7) {
+    return transactionConfirmation
+  }
+
   // Check for dispute transaction request
   const disputeDetection = detectDisputeRequest(lowerMessage, conversationHistory)
   if (disputeDetection.confidence > 0.7) {
@@ -74,6 +88,21 @@ export function detectScenario(
   const loanDetailsDetection = detectLoanDetailsRequest(lowerMessage)
   if (loanDetailsDetection.confidence > 0.6) {
     return loanDetailsDetection
+  }
+
+  const overdraftDetection = detectOverdraftWarning(lowerMessage)
+  if (overdraftDetection.confidence > 0.7) {
+    return overdraftDetection
+  }
+
+  const marketShockDetection = detectMarketShockProtection(lowerMessage)
+  if (marketShockDetection.confidence > 0.7) {
+    return marketShockDetection
+  }
+
+  const goalAccelerationDetection = detectGoalAcceleration(lowerMessage)
+  if (goalAccelerationDetection.confidence > 0.7) {
+    return goalAccelerationDetection
   }
 
   // Default to standard
@@ -319,6 +348,140 @@ function detectReviewSuspiciousTransactions(message: string): ScenarioDetection 
   }
 }
 
+/**
+ * Detect if user wants to review a specific transaction
+ */
+function detectTransactionReview(message: string): ScenarioDetection {
+  const reviewKeywords = [
+    'review this transaction',
+    'review transaction',
+    'verify transaction',
+    'check this transaction',
+    'is this transaction mine'
+  ]
+  const hasReviewKeyword = reviewKeywords.some(keyword => message.includes(keyword))
+  if (!hasReviewKeyword) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  const descriptionMatch = message.match(/transaction:\s*(.*?)\s+for\s+/i)
+  const amountMatch = message.match(/for\s+([0-9,\.]+)/i)
+  const dateMatch = message.match(/on\s+([0-9]{4}-[0-9]{2}-[0-9]{2})/i)
+
+  return {
+    type: 'transaction_review',
+    confidence: 0.9,
+    context: {
+      transactionDescription: descriptionMatch?.[1]?.trim(),
+      transactionAmount: amountMatch ? Number(amountMatch[1].replace(/,/g, "")) : undefined,
+      transactionDate: dateMatch?.[1]
+    }
+  }
+}
+
+/**
+ * Detect confirmation after a transaction review prompt
+ */
+function detectTransactionConfirmation(message: string, conversationHistory?: string[]): ScenarioDetection {
+  const historyContext = conversationHistory?.join(" ").toLowerCase() || ""
+  const hasReviewContext = historyContext.includes("transaction under review")
+  if (!hasReviewContext) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  const approvedKeywords = ['yes', 'it was me', 'that was me', 'i did', 'correct', 'mine', 'authorized']
+  const blockedKeywords = ["no", "wasn't me", "was not me", "not me", "unauthorized", "fraud", "didn't make"]
+
+  const isApproved = approvedKeywords.some(keyword => message.includes(keyword))
+  const isBlocked = blockedKeywords.some(keyword => message.includes(keyword))
+
+  if (!isApproved && !isBlocked) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  const reviewedMatch = historyContext.match(/transaction under review:\s*([^.\n]+)/i)
+  return {
+    type: 'transaction_confirmation',
+    confidence: 0.95,
+    context: {
+      transactionDescription: reviewedMatch?.[1]?.trim(),
+      transactionDecision: isApproved ? "approved" : "blocked"
+    }
+  }
+}
+
+/**
+ * Detect overdraft warning questions
+ */
+function detectOverdraftWarning(message: string): ScenarioDetection {
+  const keywords = ['overdraft', 'overdraft warning', 'avoid overdraft', 'overdraft protection']
+  const hasKeyword = keywords.some(keyword => message.includes(keyword))
+  if (!hasKeyword) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  return {
+    type: 'overdraft_warning',
+    confidence: 0.85
+  }
+}
+
+/**
+ * Detect market shock protection questions
+ */
+function detectMarketShockProtection(message: string): ScenarioDetection {
+  const keywords = ['market shock', 'volatility', 'hedge', 'protection', 'risk-off', 'market protection']
+  const hasKeyword = keywords.some(keyword => message.includes(keyword))
+  if (!hasKeyword) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  return {
+    type: 'market_shock_protection',
+    confidence: 0.85
+  }
+}
+
+/**
+ * Detect savings goal acceleration requests
+ */
+function detectGoalAcceleration(message: string): ScenarioDetection {
+  const keywords = [
+    'accelerate my goal',
+    'boost my goal',
+    'japan trip goal',
+    'auto-boost',
+    'payday sweep',
+    'without changing my lifestyle'
+  ]
+  const hasKeyword = keywords.some(keyword => message.includes(keyword))
+  if (!hasKeyword) {
+    return {
+      type: 'standard',
+      confidence: 0.0
+    }
+  }
+
+  return {
+    type: 'goal_acceleration',
+    confidence: 0.85
+  }
+}
 /**
  * Detect if user wants to dispute a transaction
  */

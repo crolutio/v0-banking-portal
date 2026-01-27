@@ -941,7 +941,7 @@ export default function SavingsGoalsPage() {
                 <div className="flex-1">
                   <p className="font-medium">AI Savings Insight</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    You're doing great! Based on your current savings rate, you'll reach your Maldives vacation goal by
+                    You're doing great! Based on your current savings rate, you'll reach your Japan vacation goal by
                     May 2025 - one month ahead of schedule. Consider increasing your emergency fund contribution by AED
                     500/month to reach the recommended 6-month expenses buffer.
                     <CitationBadge source="Account Analysis" type="account_ledger" />

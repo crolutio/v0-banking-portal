@@ -1119,7 +1119,7 @@ export const savingsGoals: SavingsGoal[] = [
   {
     id: "goal_1",
     userId: "4e140685-8f38-49ff-aae0-d6109c46873d",
-    name: "Dream Vacation to Maldives",
+    name: "Dream Vacation to Japan",
     category: "travel",
     targetAmount: 25000,
     currentAmount: 18500,
