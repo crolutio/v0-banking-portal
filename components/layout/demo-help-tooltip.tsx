@@ -23,13 +23,33 @@ interface DemoTip {
 }
 
 const demoTips: Record<string, DemoTip> = {
+  "/home": {
+    title: "Home Demos",
+    tips: [
+      {
+        prompt: "Review suspicious transactions",
+        agentId: "banker",
+        description: "Nobu London verification flow"
+      }
+    ]
+  },
+  "/loans": {
+    title: "Loans Demos",
+    tips: [
+      { 
+        prompt: "I want to take a loan for my Japan trip",
+        agentId: "spending_analyst",
+        description: "🎯 The Strategist - Finds savings instead of loan"
+      }
+    ]
+  },
   "/cards": {
     title: "Cards Demos",
     tips: [
       { 
-        prompt: "Review suspicious transactions",
+        prompt: "I think my virtual card is compromised",
         agentId: "banker",
-        description: "Nobu London verification with auto card actions"
+        description: "Cancel, reissue, and secure subscriptions"
       }
     ]
   },
@@ -37,9 +57,9 @@ const demoTips: Record<string, DemoTip> = {
     title: "Accounts Demos",
     tips: [
       { 
-        prompt: "Explain the overdraft warning",
-        agentId: "banker",
-        description: "Auto-transfer from savings, reversed on payday"
+        prompt: "Auto-boost my Japan trip goal without changing my lifestyle",
+        agentId: "savings_coach",
+        description: "Subscriptions + round-ups + payday sweep"
       }
     ]
   },
@@ -83,8 +103,7 @@ export function DemoHelpTooltip() {
   const currentTips = demoTips[pathname] || {
     title: "Key Demos",
     tips: [
-      { prompt: "Review suspicious transactions", description: "Nobu London verification flow" },
-      { prompt: "Explain the overdraft warning", description: "Auto-transfer from savings, reversed on payday" }
+      { prompt: "Review suspicious transactions", description: "Nobu London verification flow" }
     ]
   }
 

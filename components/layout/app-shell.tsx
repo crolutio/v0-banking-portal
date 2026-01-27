@@ -142,23 +142,16 @@ function ThemeToggle() {
 
 function NotificationBell() {
   const pathname = usePathname()
-  const notifications: Array<{ id: string; title: string; description: string }> = []
+  const [reviewed, setReviewed] = useState(false)
+  const notifications: Array<{ id: string; title: string; summary: string; detail: string }> = []
 
   if (pathname === "/accounts") {
     notifications.push({
       id: "overdraft-warning",
       title: "Overdraft Warning",
-      description:
+      summary: "Upcoming payment would have caused an overdraft.",
+      detail:
         "A monthly payment would have caused an overdraft. I moved AED 1,500 from savings to cover it and will return the funds automatically after your next salary credit—no fees, no action needed.",
-    })
-  }
-
-  if (pathname === "/investments") {
-    notifications.push({
-      id: "market-shock",
-      title: "Market-Shock Protection",
-      description:
-        "Volatility spiked, so I shifted 12% into low-volatility ETFs, added a temporary hedge, and scheduled an automatic review in 7 days to unwind when conditions normalize.",
     })
   }
 
@@ -172,7 +165,7 @@ function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
           <Bell className="h-4 w-4" />
           <span className="sr-only">Notifications</span>
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+          {!reviewed && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
@@ -181,7 +174,24 @@ function NotificationBell() {
           {notifications.map((notification) => (
             <div key={notification.id} className="rounded-lg border border-border/70 p-3">
               <p className="text-sm font-medium text-foreground">{notification.title}</p>
-              <p className="text-xs text-muted-foreground mt-1">{notification.description}</p>
+              <p className="text-xs text-muted-foreground mt-1">{notification.summary}</p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReviewed(true)}
+                >
+                  Review
+                </Button>
+                {reviewed && (
+                  <span className="text-xs text-emerald-600">Reviewed</span>
+                )}
+              </div>
+              {reviewed && (
+                <div className="mt-3 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  {notification.detail}
+                </div>
+              )}
             </div>
           ))}
         </div>

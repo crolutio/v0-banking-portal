@@ -4,7 +4,7 @@
  */
 
 export interface ScenarioDetection {
-  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'payment_schedule' | 'dispute_transaction' | 'review_suspicious_transactions' | 'transaction_review' | 'transaction_confirmation' | 'overdraft_warning' | 'market_shock_protection' | 'goal_acceleration' | 'standard'
+  type: 'loan_with_travel' | 'travel_context' | 'loan_request' | 'spending_analysis' | 'loan_details' | 'payment_schedule' | 'dispute_transaction' | 'review_suspicious_transactions' | 'transaction_review' | 'transaction_confirmation' | 'overdraft_warning' | 'market_shock_protection' | 'goal_acceleration' | 'virtual_card_compromised' | 'standard'
   confidence: number
   context?: {
     travelDestination?: string
@@ -76,6 +76,11 @@ export function detectScenario(
   const transactionConfirmation = detectTransactionConfirmation(lowerMessage, conversationHistory)
   if (transactionConfirmation.confidence > 0.7) {
     return transactionConfirmation
+  }
+
+  const virtualCardDetection = detectVirtualCardCompromised(lowerMessage)
+  if (virtualCardDetection.confidence > 0.7) {
+    return virtualCardDetection
   }
 
   // Check for dispute transaction request
@@ -480,6 +485,35 @@ function detectGoalAcceleration(message: string): ScenarioDetection {
   return {
     type: 'goal_acceleration',
     confidence: 0.85
+  }
+}
+
+/**
+ * Detect if a virtual card is compromised
+ */
+function detectVirtualCardCompromised(message: string): ScenarioDetection {
+  const keywords = [
+    "virtual card",
+    "compromised",
+    "hacked",
+    "card leaked",
+    "card stolen",
+    "card is compromised",
+    "virtual card is compromised"
+  ]
+  const hasVirtualCard = message.includes("virtual card")
+  const hasRiskKeyword = keywords.some(keyword => message.includes(keyword))
+
+  if (hasVirtualCard && hasRiskKeyword) {
+    return {
+      type: "virtual_card_compromised",
+      confidence: 0.9
+    }
+  }
+
+  return {
+    type: "standard",
+    confidence: 0.0
   }
 }
 /**

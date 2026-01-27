@@ -558,6 +558,21 @@ Confirm three actions completed immediately:
 Reference the transaction by name: ${reviewedTx}. Keep the response reassuring and action-oriented.`
       }
     }
+
+    // Handle virtual card compromised scenario
+    if (scenario.type === 'virtual_card_compromised') {
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: Virtual card compromised.
+
+INSTRUCTION:
+Confirm three actions completed immediately:
+1) Cancelled the compromised virtual card.
+2) Issued a new virtual card with a fresh number.
+3) Migrated active subscriptions to the new virtual card and enabled real-time alerts.
+
+Message tone: Calm, decisive, reassuring.`
+    }
     
     // Handle travel context scenario - "The Concierge"
     if (scenario.type === 'travel_context') {
